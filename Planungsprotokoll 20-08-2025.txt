@@ -1,0 +1,37 @@
+Architekturplan:
+Sieh Max Onenote
+
+Aufbau der Services/Klassen:
+- Userservice:
+    Anmeldung: User und Passwort
+    Registierung: User und Passwort
+    Speicherung der Matchergebnisse / Rating / Elo
+
+- Bot-Service
+    Zufallsgenerator für Schere/Stein/Papier
+
+- Ranglisten-Service:
+    UserID anzeigen
+    Win/Lose Ration anzeigen
+    Anzahl Gespielte Spiele anzeigen
+
+- Game-Service
+    Gewinnentscheidung / Logik
+    Senden der Ergbebnisse
+    Spiellogik (Züge, Zeit, Runden)
+
+- Matchmaking:
+    UserIDs matchen
+    Bot zum User matchen
+    Spielersuche
+
+- Frontendservice
+    Komplettes anzeigen des Frontends
+    Fütterung mit Daten aus Backend
+
+Aufgabenteilung:
+- Jorge
+- Max
+- Claas
+- Evi
+- Richard
