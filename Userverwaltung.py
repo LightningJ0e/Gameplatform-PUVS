@@ -61,11 +61,25 @@ def get_user(username: str):
         raise HTTPException(status_code=404, detail="User not found")
     return {"username": user["username"], "PlayedGames":user["gamesPlayed"], "WonGames":user["gamesWon"]}
 
-#Change score of user
-@app.put("/users/{username}/score")
+#Change gamesWon of user
+@app.put("/users/{username}/wonGames")
 def update_score(username: str, score: int):
     user = fake_db.get(username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    user["score"] = score
+    user["gamesWon"] = score
     return {"message": "Score updated", "user": user}
+
+#Change gamesPlayed of user
+@app.put("/users/{username}/playedGames")
+def update_score(username: str, score: int):
+    user = fake_db.get(username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user["gamesPlayed"] = score
+    return {"message": "Score updated", "user": user}
+
+
+# http://127.0.0.1:8000/docs
+# uvicorn Userverwaltung:app --reload
+# pip install fastapi uvicorn
