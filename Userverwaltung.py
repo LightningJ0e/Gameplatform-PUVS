@@ -1,15 +1,22 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, status, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Dict
 from datetime import datetime, timedelta
 from jose import jwt
+from jwt import PyJWTError
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm
 import secrets
 
 #TODO THIS KEY SHOULD BE SAVE IN AN EVIRONMENTVARIABLE IN THE KUBERNETES CLUSTER!!!!
 # It can then be accesed in code via SECRET_KEY = os.environ.get("JWT_SECRET")
 SECRET_KEY = secrets.token_hex(32)  # Hex String
+ALGORITHM = "HS256"
 
 app = FastAPI(title="UserService")
+
+#Dependency Helper
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # In-Memory (RAM) Database --> #TODO exchange with real Database once Claas is finished
 # Only holds data while programm/container is running
@@ -34,36 +41,59 @@ def register(user: User):
     return {"message": f"User {user.username} registered successfully"}
 
 #login function for existing users
+# JWT Token needs to be saved in the frontend
 @app.post("/login")
-def login(username: str, password: str):
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+
+    username = form_data.username
+    password = form_data.password
+
     user = fake_db.get(username)
     if not user or user["password"] != password:
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    #TODO Später JWT-Token zurückgeben --> that way we could easily track the games of the player and add the games to the account that is saved in the JWT-Token
 
-    '''
-    # Set wehn the session will expire, in this case one hour from login
-    expire = datetime.now(datetime.timezone.utc) + timedelta(hours=1)
+    # Set when the session will expire, in this case one hour from login
+    expire = datetime.now() + timedelta(hours=1)
     payload = {"sub": username, "exp": expire}
 
     token = jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
     return {"access_token": token, "token_type": "bearer"}
-    '''
 
-    return {"message": f"Welcome {username}!"}
 
 #get puplic user info --> Password is not public
 @app.get("/users/{username}")
-def get_user(username: str):
+def get_userInfo(username: str):
     user = fake_db.get(username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"username": user["username"], "PlayedGames":user["gamesPlayed"], "WonGames":user["gamesWon"]}
 
+
+# Funktion zum überpüfen des users / des übergebenen Tokens. Wird verwendet um geschützte Funktionen wie das Erhöhen der gewonnen Spiele zu validieren
+def getUserFromToken(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")  # "sub" = Subject (Benutzername)
+        if username is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Ungültiger Token: kein Benutzername enthalten",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        if username in fake_db:
+            return username
+        
+    except PyJWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Ungültiger oder abgelaufener Token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
 #Change gamesWon of user
 @app.put("/users/{username}/wonGames")
-def update_score(username: str, score: int):
+def update_score(score: int, username: str = Depends(getUserFromToken)):
     user = fake_db.get(username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -72,13 +102,24 @@ def update_score(username: str, score: int):
 
 #Change gamesPlayed of user
 @app.put("/users/{username}/playedGames")
-def update_score(username: str, score: int):
+def update_score(score: int, username: str = Depends(getUserFromToken)):
     user = fake_db.get(username)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     user["gamesPlayed"] = score
     return {"message": "Score updated", "user": user}
 
+# Geschützter Testendpunkt; FÜRS TESTEN, NICHT FÜR NUTZUNG IN PRODUKTION
+@app.get("/protected")
+def protected(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return {"message": f"Hello {username}, you accessed a protected route!"}
+    except PyJWTError:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 # http://127.0.0.1:8000/docs
 # uvicorn Userverwaltung:app --reload
