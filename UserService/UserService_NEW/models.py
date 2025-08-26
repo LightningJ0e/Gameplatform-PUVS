@@ -8,3 +8,4 @@ class User(Base):
     password = Column(String)
     games_played = Column(Integer, default=0)
     games_won = Column(Integer, default=0)
+    elo = Column(Integer, default=500)

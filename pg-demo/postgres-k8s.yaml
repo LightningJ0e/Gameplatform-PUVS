@@ -1,24 +1,24 @@
 ﻿apiVersion: v1
 kind: Namespace
 metadata:
-  name: postgres_db
+  name: postgresdb
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: pg-secret
-  namespace: postgres_db
+  namespace: postgresdb
 type: Opaque
 stringData:
   POSTGRES_USER: game_db_admin
   POSTGRES_PASSWORD: t22_game_admin
-  POSTGRES_DB: game_db
+  postgresdb: game_db
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres
-  namespace: postgres_db
+  namespace: postgresdb
 spec:
   serviceName: "postgres"
   replicas: 1
@@ -41,8 +41,8 @@ spec:
           valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_USER } }
         - name: POSTGRES_PASSWORD
           valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_PASSWORD } }
-        - name: POSTGRES_DB
-          valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_DB } }
+        - name: postgresdb
+          valueFrom: { secretKeyRef: { name: pg-secret, key: postgresdb } }
         volumeMounts:
         - name: pg-data
           mountPath: /var/lib/postgresql/data
@@ -76,7 +76,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: postgres_db
+  namespace: postgresdb
 spec:
   type: ClusterIP
   selector:

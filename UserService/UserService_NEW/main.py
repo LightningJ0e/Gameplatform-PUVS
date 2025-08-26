@@ -16,6 +16,7 @@ app = FastAPI(title="UserService")
 # ------------------------------
 @app.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
+    #TODO limit password and USername to 20 chars
     existing_user = get_user_by_username(db, user.username)
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")

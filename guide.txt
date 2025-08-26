@@ -7,5 +7,11 @@ minikube kubectl -- get nodes
 minikube kubectl -- -n kube-system get pods
 cd ./pg-demo
 minikube kubectl -- apply -f .\postgres-k8s.yaml
-minikube kubectl -- -n db port-forward svc/postgres 55432:5432
+minikube kubectl -- apply -f .\adminer-k8s.yaml
+
+ONLY FIRST TIME: minikube kubectl -- -n postgresdb exec -it postgres-0 -- psql -U game_db_admin -d postgres -c "create database game_db;"
+
+In one shell: minikube kubectl -- -n postgresdb get pods -l app=adminer -w
+
+in the other shell: minikube service adminer -n postgresdb --url
 
