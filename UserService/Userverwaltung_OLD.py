@@ -121,6 +121,7 @@ def protected(token: str = Depends(oauth2_scheme)):
     except PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+        
 # http://127.0.0.1:8000/docs
 # uvicorn Userverwaltung:app --reload
 # pip install fastapi uvicorn

@@ -2,6 +2,7 @@
 # Zur installation von kubectl und minikube
 winget install Kubernetes.kubectl
 winget install Kubernetes.minikube
+
 minikube start --driver=docker --cpus=4 --memory=8192
 minikube kubectl -- get nodes
 minikube kubectl -- -n kube-system get pods
@@ -15,3 +16,12 @@ In one shell: minikube kubectl -- -n postgresdb get pods -l app=adminer -w
 
 in the other shell: minikube service adminer -n postgresdb --url
 
+
+When starting normally:
+minikube start --driver=docker --cpus=4 --memory=8192
+
+In one shell: minikube kubectl -- -n postgresdb get pods -l app=adminer -w
+
+in the other shell: minikube service adminer -n postgresdb --url
+
+in a third shell: minikube kubectl -- -n postgresdb port-forward svc/postgres 55432:5432
