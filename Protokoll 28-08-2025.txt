@@ -1,0 +1,22 @@
+Aufgabenteilung:
+
+    Evi: FrontendService
+    Claas: DatenbankService
+    Max: LeaderboardService
+    Jorge: GameLogikService
+    Richard: UserService, BotService
+
+    Noch Offen:
+    - API-Gateway / Ingress: Einheitlicher Einstiegspunkt für Client-Anfragen.
+    - Logging/Monitoring: Überwachung mit entsprechender Softwarelösung
+    - MatchmakingService
+    - CI/CD-Pipeline
+
+Deadline für den reinen Anwendungscode in Python:
+    08.09.2025 --> früher?
+        --> 2 Wochen Übrig bis Präsentation um Applikation in Kubernetes zu überführen
+
+Sonstiges:
+    - Wie funktioneirt das mit dem Skalieren?
+    - Wie testen wir die Kubernetes Implementation?
+
