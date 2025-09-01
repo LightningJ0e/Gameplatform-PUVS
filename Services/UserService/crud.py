@@ -1,6 +1,6 @@
-from models import User
+from sharedShit.models import User
 from sqlalchemy.orm import Session
-from auth import hash_password, verify_password
+from Services.UserService.auth import hash_password, verify_password
 
 def create_user(db: Session, username: str, password: str):
     hashed = hash_password(password)
