@@ -8,3 +8,4 @@ class UserOut(BaseModel):
     username: str
     games_played: int
     games_won: int
+    elo: int

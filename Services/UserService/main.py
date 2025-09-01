@@ -38,7 +38,6 @@ def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = 
     token = create_access_token({"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
-
 #TODO maybe only increment the games played / games won instead of giving a value
 #TODO maybe check if he is already logged in? --> check if saved token in frontend is still valid.
 # ------------------------------
@@ -96,7 +95,7 @@ def update_GamesWon(wonGames: int, db: Session = Depends(get_db), token: str=Dep
             detail="Could not validate JWT-Token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
 # ------------------------------
 # Elo-Update 
 # ------------------------------
@@ -124,10 +123,12 @@ def update_GamesWon(elo: int, db: Session = Depends(get_db), token: str=Depends(
             detail="Could not validate JWT-Token.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
 @app.get("/users/{username}")
 def get_userInfo(username: str, db: Session = Depends(get_db)):
     db_user = get_user_by_username(db, username)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
+
+#TODO MAybe change the returns to the UserOut-Model
