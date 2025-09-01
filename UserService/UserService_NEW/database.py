@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
+#TODO Database url überprüfen
 DATABASE_URL = "postgresql+psycopg2://game_db_admin:t22_game_admin@localhost:55432/game_db"
 
 engine = create_engine(DATABASE_URL)
