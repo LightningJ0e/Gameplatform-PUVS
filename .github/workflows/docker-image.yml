@@ -24,7 +24,7 @@ jobs:
         #  password: ${{secrets.GITHUB_TOKEN}}
 
       - name: "Build UserService image"
-        run: docker build -t ghcr.io/gameplatform-puvs/UserServiceImage:latest ./Services/UserService
+        run: docker build -t ghcr.io/gameplatform-puvs/userserviceimage:latest ./Services/UserService
 
       - name: "Push Docker image"
-        run: docker push ghcr.io/gameplatform-puvs/UserServiceImage:latest
+        run: docker push ghcr.io/gameplatform-puvs/userserviceimage:latest
