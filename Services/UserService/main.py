@@ -3,9 +3,9 @@ from sqlalchemy.orm import Session
 from jose import JWTError, jwt
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sharedShit.database import get_db, Base, engine
-from .crud import create_user, get_user_by_username
-from schemas import UserCreate, UserOut
-from .auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM
+from Services.UserService.crud import create_user, get_user_by_username
+from Services.UserService.schemas import UserCreate, UserOut
+from Services.UserService.auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM
 
 # Tabellen erzeugen, falls noch nicht vorhanden
 Base.metadata.create_all(bind=engine)
