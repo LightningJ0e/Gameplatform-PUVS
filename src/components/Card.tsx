@@ -5,6 +5,7 @@ interface CardProps {
   size?: "small" | "medium" | "large" | "xlarge" | "xxlarge";
   isSelected?: boolean;
   onClick?: () => void;
+  onHover?: (type: "rock" | "paper" | "scissors" | null) => void;
 }
 
 export default function Card({
@@ -12,6 +13,7 @@ export default function Card({
   size = "medium",
   isSelected,
   onClick,
+  onHover,
 }: CardProps) {
   // Karten-Konfiguration basierend auf deinem Design
   const cardConfig = {
@@ -55,6 +57,8 @@ export default function Card({
           relative overflow-hidden
         `}
       onClick={onClick}
+      onMouseEnter={() => onHover?.(type)}
+      onMouseLeave={() => onHover?.(null)}
     >
       {/* Glossy Overlay Effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl" />
