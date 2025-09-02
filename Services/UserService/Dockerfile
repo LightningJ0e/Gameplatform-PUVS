@@ -1,6 +1,9 @@
 #Base Image
 FROM python:3.13.7
 
+#Label the Image to make it public in repo
+LABEL org.opencontainers.image.source="https://github.com/LightningJ0e/Gameplatform-PUVS"
+
 #Arbeitsverzeichnis
 WORKDIR /app
 
