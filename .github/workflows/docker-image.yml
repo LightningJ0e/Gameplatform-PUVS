@@ -24,7 +24,7 @@ jobs:
           password: ${{secrets.GITHUB_TOKEN}}
 
       - name: "Build UserService image"
-        run: docker build -t ghcr.io/gameplatform-puvs/userserviceimage:latest -f ./Services/UserService/Dockerfile .
+        run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/userserviceimage:latest -f ./Services/UserService/Dockerfile .
 
       - name: "Push Docker image"
         run: docker push ghcr.io/lightningj0e/gameplatform-puvs/userserviceimage:latest
