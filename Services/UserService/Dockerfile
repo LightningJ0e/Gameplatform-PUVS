@@ -12,7 +12,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Code und shared code kopieren
-COPY ../../sharedShit /app/sharedShit
+COPY ./sharedShit /app/sharedShit
 COPY . .
 
 # FastAPI starten
