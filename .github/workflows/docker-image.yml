@@ -27,4 +27,4 @@ jobs:
         run: docker build -t ghcr.io/gameplatform-puvs/userserviceimage:latest -f ./Services/UserService/Dockerfile .
 
       - name: "Push Docker image"
-        run: docker push ghcr.io/LightningJ0e/Gameplatform-PUVS/UserServiceImage:latest
+        run: docker push ghcr.io/lightningj0e/gameplatform-puvs/userserviceimage:latest
