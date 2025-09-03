@@ -1,9 +1,8 @@
 from fastapi import FastAPI, Depends
-from utils import decide_round, wins_needed
+from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state
 from sqlalchemy.orm import Session
-from database import get_db, Base, engine
-from utils import get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state
-from schemas import Action, GameStateOut, MoveIn  
+from sharedShit.database import get_db, Base, engine
+from Services.GameService.schemas import Action, GameStateOut, MoveIn  
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GameService")
