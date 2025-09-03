@@ -2,10 +2,11 @@ from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import jwt
 import secrets
+import os
 
 #TODO somehow save it in the cluster enviroment variables instead of creating it in the code
-SECRET_KEY = secrets.token_hex(32)  # Hex String
-ALGORITHM = "HS256"
+SECRET_KEY = os.environ['JWT_SECRET']
+ALGORITHM = os.environ['JWT_ALG']
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
