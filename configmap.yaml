@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+  namespace: postgresdb  # Namespace, in dem die DB läuft
+data:
+  DB_HOST: "postgres.postgresdb"   # Service-Name der Datenbank + Namespace
+  DB_PORT: "5432"
+  DB_NAME: "game_db"

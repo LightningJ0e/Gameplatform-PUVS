@@ -1,0 +1,225 @@
+# ------------------------------
+# Secrets holding sensisible Info
+# ------------------------------
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets
+type: Opaque
+stringData:
+  POSTGRES_USER: game_db_admin
+  POSTGRES_PASSWORD: t22_game_admin
+  JWT_SECRET: fvsxl6Qm2ghbsamaQr+sCgLeFWxH8ZUSAnYVtSe+zHw=
+  JWT_ALG: HS256
+---
+# ------------------------------
+# Configmap: Holds connectionURL to database
+# ------------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-config
+data:
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+  DB_NAME: "game_db"
+---
+# ------------------------------
+# Database Deployment
+# ------------------------------
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: "postgres"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_USER } }
+        - name: POSTGRES_PASSWORD
+          valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_PASSWORD } }
+        - name: POSTGRES_DB
+          valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_DB } }
+        volumeMounts:
+        - name: pg-data
+          mountPath: /var/lib/postgresql/data
+        readinessProbe:
+          exec:
+            command: ["pg_isready","-U","game_db_admin","-d","game_db"]
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["pg_isready","-U","game_db_admin","-d","game_db"]
+          initialDelaySeconds: 15
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+  volumeClaimTemplates:
+  - metadata:
+      name: pg-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 5Gi
+---
+# ------------------------------
+# Database Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - name: postgres
+    port: 5432
+    targetPort: 5432
+---
+# ------------------------------
+# Database-UI-Deployment
+# ------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adminer
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: adminer }
+  template:
+    metadata:
+      labels: { app: adminer }
+    spec:
+      containers:
+      - name: adminer
+        image: adminer:latest
+        env:
+        - name: ADMINER_DEFAULT_SERVER
+          value: postgres
+        ports:
+        - containerPort: 8080
+---
+# ------------------------------
+# Database-UI-Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminer
+spec:
+  selector:
+    app: adminer
+  ports:
+  - port: 8080
+    targetPort: 8080
+  type: ClusterIP
+---
+# ------------------------------
+# UserService-Deployment
+# ------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userservice
+  labels:
+    app: userservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: userservice
+  template:
+    metadata:
+      labels:
+        app: userservice
+    spec:
+      containers:
+        - name: userservice
+          image: ghcr.io/lightningj0e/gameplatform-puvs/userserviceimage:latest
+          ports:
+            - containerPort: 8000
+          resources:
+                requests:        # Was der Container garantiert bekommt
+                  cpu: "250m"    # 0.25 vCPU
+                  memory: "256Mi"
+                limits:          # Maximale Obergrenze
+                  cpu: "500m"    # 0.5 vCPU
+                  memory: "512Mi"
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_SECRET
+            - name: JWT_ALG
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_ALG
+---
+# ------------------------------
+# UserService-Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: userservice
+spec:
+  type: NodePort
+  selector:
+    app: userservice
+  ports:
+    - protocol: TCP
+      port: 8000        # Cluster-Port
+      targetPort: 8000  # Container-Port
+      nodePort: 30080   # Node-Port (z. B. 30080, muss im Bereich 30000-32767 liegen)
