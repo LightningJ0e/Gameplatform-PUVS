@@ -25,3 +25,6 @@ In one shell: minikube kubectl -- -n postgresdb get pods -l app=adminer -w
 in the other shell: minikube service adminer -n postgresdb --url
 
 in a third shell: minikube kubectl -- -n postgresdb port-forward svc/postgres 55432:5432
+
+in fourth shell: uvicorn Services.<YourService>.main:app --reload
+then open: http://127.0.0.1:8000/docs

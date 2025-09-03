@@ -1,7 +1,6 @@
-from schemas import Action
+from Services.GameService.schemas import GameStateOut, RoundStateOut, Action
 from fastapi import HTTPException, status
-from models import  Game, Round
-from schemas import GameStateOut, RoundStateOut, Action
+from sharedShit.models import Game, Round
 from sqlalchemy.orm import Session
 
 victories = {
