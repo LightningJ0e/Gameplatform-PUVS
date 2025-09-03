@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userservice
+  labels:
+    app: userservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: userservice
+  template:
+    metadata:
+      labels:
+        app: userservice
+    spec:
+      containers:
+        - name: userservice
+          image: ghcr.io/lightningj0e/gameplatform-puvs/userserviceimage:latest
+          ports:
+            - containerPort: 8000
+          resources:
+                requests:        # Was der Container garantiert bekommt
+                  cpu: "250m"    # 0.25 vCPU
+                  memory: "256Mi"
+                limits:          # Maximale Obergrenze
+                  cpu: "500m"    # 0.5 vCPU
+                  memory: "512Mi"
