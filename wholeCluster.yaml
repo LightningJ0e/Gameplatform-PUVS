@@ -9,6 +9,7 @@ type: Opaque
 stringData:
   POSTGRES_USER: game_db_admin
   POSTGRES_PASSWORD: t22_game_admin
+  POSTGRES_DB: game_db
   JWT_SECRET: fvsxl6Qm2ghbsamaQr+sCgLeFWxH8ZUSAnYVtSe+zHw=
   JWT_ALG: HS256
 ---
@@ -25,7 +26,7 @@ data:
   DB_NAME: "game_db"
 ---
 # ------------------------------
-# Database Deployment
+# Database Deployment (StatefulSet)
 # ------------------------------
 apiVersion: apps/v1
 kind: StatefulSet
@@ -50,11 +51,20 @@ spec:
           name: postgres
         env:
         - name: POSTGRES_USER
-          valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_USER } }
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: POSTGRES_USER
         - name: POSTGRES_PASSWORD
-          valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_PASSWORD } }
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: POSTGRES_PASSWORD
         - name: POSTGRES_DB
-          valueFrom: { secretKeyRef: { name: pg-secret, key: POSTGRES_DB } }
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key: POSTGRES_DB
         volumeMounts:
         - name: pg-data
           mountPath: /var/lib/postgresql/data
@@ -101,7 +111,7 @@ spec:
     targetPort: 5432
 ---
 # ------------------------------
-# Database-UI-Deployment
+# Database-UI-Deployment (Adminer)
 # ------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -164,12 +174,12 @@ spec:
           ports:
             - containerPort: 8000
           resources:
-                requests:        # Was der Container garantiert bekommt
-                  cpu: "250m"    # 0.25 vCPU
-                  memory: "256Mi"
-                limits:          # Maximale Obergrenze
-                  cpu: "500m"    # 0.5 vCPU
-                  memory: "512Mi"
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           env:
             - name: DB_HOST
               valueFrom:
@@ -222,4 +232,4 @@ spec:
     - protocol: TCP
       port: 8000        # Cluster-Port
       targetPort: 8000  # Container-Port
-      nodePort: 30080   # Node-Port (z. B. 30080, muss im Bereich 30000-32767 liegen)
+      nodePort: 30080   # Node-Port (muss im Bereich 30000-32767 liegen)
