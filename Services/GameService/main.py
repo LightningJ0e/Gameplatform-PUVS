@@ -30,6 +30,7 @@ def submit_move(game_id: int, body: MoveIn, db: Session = Depends(get_db)):
         if game.score_p1 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
+            
         elif game.score_p2 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
