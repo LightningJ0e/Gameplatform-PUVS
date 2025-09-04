@@ -2,7 +2,8 @@ from fastapi import FastAPI, Depends
 from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
-from Services.GameService.schemas import Action, GameStateOut, MoveIn  
+from Services.GameService.schemas import Action, GameStateOut, MoveIn
+from Services.GameService.auth import get_current_user 
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GameService")
@@ -30,7 +31,7 @@ def submit_move(game_id: int, body: MoveIn, db: Session = Depends(get_db)):
         if game.score_p1 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
-            
+
         elif game.score_p2 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
@@ -40,3 +41,7 @@ def submit_move(game_id: int, body: MoveIn, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(game)
     return to_game_state(db, game)
+
+@app.get("/games/me")
+def get_my_games(current_user: str = Depends(get_current_user)):
+    return {"message": f"Hello {current_user}, here are your games!"}
