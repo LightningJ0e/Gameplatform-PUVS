@@ -8,7 +8,8 @@ SECRET_KEY = os.getenv("JWT_SECRET")
 ALGORITHM = os.getenv("JWT_ALG", "HS256")
 
 # sagt FastAPI, dass der Token im Header "Authorization: Bearer <token>" kommt
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
+oauth2_scheme = HTTPBearer()
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
