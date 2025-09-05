@@ -37,11 +37,11 @@ def submit_move(game_id: int,
         if game.score_p1 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
-            notify_user_service_winner(game.player_1_username, game.player_2_username, token.credentials)
+            notify_user_service_winner(game.player_1_id, game.player_2_id, token.credentials)
         elif game.score_p2 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
-            notify_user_service_winner(game.player_2_username, game.player_1_username, token.credentials)
+            notify_user_service_winner(game.player_2_id, game.player_1_id, token.credentials)
         else:
             create_next_round(db, game, r.round_no + 1)
 

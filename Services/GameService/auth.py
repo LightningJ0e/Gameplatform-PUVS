@@ -18,7 +18,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(oauth2_
     token = credentials.credentials  # hier holen wir den String aus dem Objekt
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        username: int = payload.get("sub")
         if username is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
