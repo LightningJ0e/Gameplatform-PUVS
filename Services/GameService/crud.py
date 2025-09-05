@@ -15,7 +15,7 @@ USERSERVICE_URL = "http://userservice:8000"
 
     # Verlierer: +1 Spiel
     requests.post(f"{USERSERVICE_URL}/updateGamesPlayed/{loser_username}?playedGames=1", headers=headers)"""
-def notify_user_service_winner(winner_username: str, loser_username: str, token: str):
+def notify_user_service_winner(winner_username: int, loser_username: int, token: str):
     headers = {"Authorization": f"Bearer {token}", "accept": "application/json"}
 
     try:
