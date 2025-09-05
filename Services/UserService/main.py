@@ -35,7 +35,7 @@ def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = 
     db_user = get_user_by_username(db, username)
     if not db_user or not verify_password(password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_access_token({"sub": db_user.id})
+    token = create_access_token({"sub": db_user.username})
     return {"access_token": token, "token_type": "bearer"}
 
 #TODO maybe only increment the games played / games won instead of giving a value
@@ -47,7 +47,7 @@ def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = 
 def update_GamesPlayed(playedGames: int, db: Session = Depends(get_db), token: str=Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: int = payload.get("sub")
+        username: str = payload.get("sub")
         db_user = get_user_by_username(db, username)
         if username is None or not db_user:
             raise HTTPException(
