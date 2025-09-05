@@ -3,10 +3,12 @@ from Services.GameService.utils import decide_round, wins_needed, get_game, asse
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
 from Services.GameService.schemas import Action, GameStateOut, MoveIn
-from Services.GameService.auth import get_current_user 
+from Services.GameService.auth import get_current_user, oauth2_scheme
+from Services.GameService.crud import notify_user_service_winner
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GameService")
+
 
 @app.post("/games/{game_id}/move", response_model=GameStateOut)
 def submit_move(game_id: int, body: MoveIn, db: Session = Depends(get_db)):
@@ -31,10 +33,11 @@ def submit_move(game_id: int, body: MoveIn, db: Session = Depends(get_db)):
         if game.score_p1 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
-
+            notify_user_service_winner(game.player_1_username, game.player_2_username, token)
         elif game.score_p2 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
+            notify_user_service_winner(game.player_2_username, game.player_1_username, token)
         else:
             create_next_round(db, game, r.round_no + 1)
 
