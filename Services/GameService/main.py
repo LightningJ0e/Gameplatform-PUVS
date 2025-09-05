@@ -5,13 +5,17 @@ from sharedShit.database import get_db, Base, engine
 from Services.GameService.schemas import Action, GameStateOut, MoveIn
 from Services.GameService.auth import get_current_user, oauth2_scheme
 from Services.GameService.crud import notify_user_service_winner
+from fastapi.security import HTTPAuthorizationCredentials
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GameService")
 
 
 @app.post("/games/{game_id}/move", response_model=GameStateOut)
-def submit_move(game_id: int, body: MoveIn, db: Session = Depends(get_db)):
+def submit_move(game_id: int,
+    body: MoveIn,
+    db: Session = Depends(get_db),
+    token: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
     game = get_game(db, game_id)
     assert_game_open(game)
 
@@ -33,11 +37,11 @@ def submit_move(game_id: int, body: MoveIn, db: Session = Depends(get_db)):
         if game.score_p1 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
-            notify_user_service_winner(game.player_1_username, game.player_2_username, token)
+            notify_user_service_winner(game.player_1_username, game.player_2_username, token.credentials)
         elif game.score_p2 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
-            notify_user_service_winner(game.player_2_username, game.player_1_username, token)
+            notify_user_service_winner(game.player_2_username, game.player_1_username, token.credentials)
         else:
             create_next_round(db, game, r.round_no + 1)
 
