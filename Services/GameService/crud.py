@@ -22,10 +22,8 @@ def notify_user_service_played(token: str):
     }
 
     try:
-        r = requests.post(
-            f"{USERSERVICE_URL}/updateGamesPlayed?playedGames=1",
-            headers=headers,
-        )
+        r = requests.post(f"{USERSERVICE_URL}/updateGamesPlayed/dummy?playedGames=1", headers=headers)
+
 
         if not r.ok:
             logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
