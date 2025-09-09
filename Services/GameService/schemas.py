@@ -7,6 +7,11 @@ class Action(IntEnum):
     Paper = 1
     Scissors = 2
 
+class GameCreate(BaseModel):
+    player_id1: int
+    player_id2: int
+    mode: str
+
 class MoveIn(BaseModel):
     player_id: int = Field(..., description="Der Spieler, der die Aktion ausführt")
     action: Action = Field(..., description="0=Rock, 1=Paper, 2=Scissors")
