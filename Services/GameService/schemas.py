@@ -24,7 +24,7 @@ class RoundStateOut(BaseModel):
     status: str                             # "waiting"|"complete"
 
 class GameStateOut(BaseModel):
-    game_id: int
+    id: int
     player_1_id: int
     player_2_id: int
     mode: str                                # "bo1"|"bo3"|"bo5"
