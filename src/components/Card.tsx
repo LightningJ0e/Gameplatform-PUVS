@@ -4,16 +4,20 @@ interface CardProps {
   type: "rock" | "paper" | "scissors";
   size?: "small" | "medium" | "large" | "xlarge" | "xxlarge";
   isSelected?: boolean;
+  isFlipped?: boolean; // true = Vorderseite, false = Rückseite
   onClick?: () => void;
   onHover?: (type: "rock" | "paper" | "scissors" | null) => void;
+  isInteractive?: boolean; // false = keine Hover/Click-Effekte
 }
 
 export default function Card({
   type,
   size = "medium",
   isSelected,
+  isFlipped = true,
   onClick,
   onHover,
+  isInteractive = true,
 }: CardProps) {
   // Karten-Konfiguration basierend auf deinem Design
   const cardConfig = {
@@ -22,21 +26,30 @@ export default function Card({
         "bg-gradient-to-bl from-purple-950 via-purple-400 to-purple-950",
       image: "/scissors.png",
       shadow: "shadow-purple-500/50",
+      hoverShadow: "hover:shadow-purple-400/40",
+      selectedRing: "ring-purple-400",
+      selectedShadow: "shadow-purple-400/60",
     },
     rock: {
-      gradient: "bg-gradient-to-bl from-blue-950 via-blue-400 to-blue-950",
+      gradient: "bg-gradient-to-bl from-blue-950  via-blue-400 to-blue-950",
       image: "/rock.png",
       shadow: "shadow-blue-500/50",
+      hoverShadow: "hover:shadow-blue-400/40",
+      selectedRing: "ring-blue-400",
+      selectedShadow: "shadow-blue-400/60",
     },
     paper: {
       gradient: "bg-gradient-to-bl from-gray-600 via-gray-200 to-gray-600",
       image: "/paper.png",
       shadow: "shadow-gray-500/50",
+      hoverShadow: "hover:shadow-gray-300/40",
+      selectedRing: "ring-gray-300",
+      selectedShadow: "shadow-gray-300/60",
     },
   };
 
   const sizeClasses = {
-    small: "w-20 h-28 text-lg",
+    small: "w-28 h-38 text-lg",
     medium: "w-32 h-44 text-2xl",
     large: "w-40 h-56 text-3xl",
     xlarge: "w-48 h-64 text-4xl",
@@ -45,97 +58,157 @@ export default function Card({
 
   const config = cardConfig[type];
 
+  // Rückseiten-Design
+  const cardBackDesign = {
+    gradient: "bg-gradient-to-bl from-amber-600 via-yellow-500 to-amber-600",
+    shadow: "shadow-amber-500/50",
+  };
+
   return (
     <div
       className={`
-          ${config.gradient}
           ${sizeClasses[size]}
-          ${config.shadow}
-          ${isSelected ? "ring-4 ring-yellow-400 scale-105" : ""}
-          rounded-xl p-4 cursor-pointer transition-all duration-300
-          hover:scale-105 hover:shadow-2xl
-          relative overflow-hidden
+          ${
+            isSelected && isInteractive
+              ? `ring-4 ${config.selectedRing} scale-105 shadow-2xl ${config.selectedShadow}`
+              : ""
+          }
+          ${isInteractive ? "cursor-pointer" : ""}
+          transition-all duration-500
+          ${
+            isInteractive
+              ? `hover:scale-105 hover:shadow-2xl ${config.hoverShadow}`
+              : ""
+          }
+          relative preserve-3d rounded-xl
+          ${isFlipped ? "" : "rotate-y-180"}
         `}
-      onClick={onClick}
-      onMouseEnter={() => onHover?.(type)}
-      onMouseLeave={() => onHover?.(null)}
+      onClick={isInteractive ? onClick : undefined}
+      onMouseEnter={isInteractive ? () => onHover?.(type) : undefined}
+      onMouseLeave={isInteractive ? () => onHover?.(null) : undefined}
+      style={{
+        transformStyle: "preserve-3d",
+        transform: isFlipped ? "rotateY(0deg)" : "rotateY(180deg)",
+      }}
     >
-      {/* Glossy Overlay Effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl" />
+      {/* Vorderseite */}
+      <div
+        className={`
+          ${config.gradient}
+          ${config.shadow}
+          absolute inset-0 rounded-xl p-4 overflow-hidden
+          backface-hidden
+        `}
+        style={{ backfaceVisibility: "hidden" }}
+      >
+        {/* Glossy Overlay Effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-xl" />
 
-      {/* Inner Border */}
-      <div className="absolute inset-4 border-2 border-black/20" />
+        {/* Inner Border */}
+        <div
+          className={
+            size === "xxlarge"
+              ? "absolute inset-8 border-3 border-black/20"
+              : "absolute inset-4 border-2 border-black/20"
+          }
+        >
+          <div className="relative z-10 h-full">
+            {/* Icon oben rechts */}
+            <div className="absolute top-4 right-4">
+              <Image
+                src={config.image}
+                alt={type}
+                width={
+                  size === "large"
+                    ? 65
+                    : size === "xlarge"
+                    ? 75
+                    : size === "xxlarge"
+                    ? 95
+                    : type === "rock"
+                    ? 45
+                    : 40
+                }
+                height={
+                  size === "large"
+                    ? 65
+                    : size === "xlarge"
+                    ? 75
+                    : size === "xxlarge"
+                    ? 95
+                    : type === "rock"
+                    ? 45
+                    : 40
+                }
+                className={
+                  type === "scissors"
+                    ? "drop-shadow-lg rotate-320"
+                    : "drop-shadow-lg rotate-50"
+                }
+              />
+            </div>
 
-      {/* Icon Container */}
-      <div className="relative z-10 h-full">
-        {/* Icon oben rechts */}
-        <div className="absolute top-4 right-4">
-          <Image
-            src={config.image}
-            alt={type}
-            width={
-              size === "large"
-                ? 65
-                : size === "xlarge"
-                ? 75
-                : size === "xxlarge"
-                ? 95
-                : type === "rock"
-                ? 45
-                : 40
-            }
-            height={
-              size === "large"
-                ? 65
-                : size === "xlarge"
-                ? 75
-                : size === "xxlarge"
-                ? 95
-                : type === "rock"
-                ? 45
-                : 40
-            }
-            className={
-              type === "scissors"
-                ? "drop-shadow-lg rotate-320"
-                : "drop-shadow-lg rotate-50"
-            }
-          />
+            <div className="absolute bottom-4 left-4">
+              <Image
+                src={config.image}
+                alt={type}
+                width={
+                  size === "large"
+                    ? 65
+                    : size === "xlarge"
+                    ? 75
+                    : size === "xxlarge"
+                    ? 95
+                    : type === "rock"
+                    ? 45
+                    : 40
+                }
+                height={
+                  size === "large"
+                    ? 65
+                    : size === "xlarge"
+                    ? 75
+                    : size === "xxlarge"
+                    ? 95
+                    : type === "rock"
+                    ? 45
+                    : 40
+                }
+                className={
+                  type === "scissors"
+                    ? "drop-shadow-lg rotate-140"
+                    : "drop-shadow-lg rotate-240"
+                }
+              />
+            </div>
+          </div>
         </div>
+      </div>
 
-        <div className="absolute bottom-4 left-4">
-          <Image
-            src={config.image}
-            alt={type}
-            width={
-              size === "large"
-                ? 65
-                : size === "xlarge"
-                ? 75
-                : size === "xxlarge"
-                ? 95
-                : type === "rock"
-                ? 45
-                : 40
-            }
-            height={
-              size === "large"
-                ? 65
-                : size === "xlarge"
-                ? 75
-                : size === "xxlarge"
-                ? 95
-                : type === "rock"
-                ? 45
-                : 40
-            }
-            className={
-              type === "scissors"
-                ? "drop-shadow-lg rotate-140"
-                : "drop-shadow-lg rotate-240"
-            }
-          />
-        </div>
+      {/* Rückseite */}
+      <div
+        className={`
+          ${cardBackDesign.gradient}
+          ${cardBackDesign.shadow}
+          absolute inset-0 rounded-xl p-4 overflow-hidden
+          backface-hidden rotate-y-180
+        `}
+        style={{
+          backfaceVisibility: "hidden",
+          transform: "rotateY(180deg)",
+        }}
+      >
+        {/* Glossy Overlay Effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent rounded-xl" />
+
+        {/* Rückseiten-Muster */}
+        <div
+          className={
+            size === "xxlarge"
+              ? "absolute inset-8 border-3 border-black/20"
+              : "absolute inset-4 border-2 border-black/20"
+          }
+        ></div>
       </div>
     </div>
   );

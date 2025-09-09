@@ -20,16 +20,27 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
+  // Hartcodierter User
+  const hardcodedUser = {
+    username: "admin",
+    password: "password123",
+    id: "1",
+  };
+
   const login = async (
     username: string,
     password: string
   ): Promise<boolean> => {
-    if (username && password) {
-      const mockUser: User = {
-        id: "1",
-        username: username,
+    // Überprüfung gegen hartcodierten User
+    if (
+      username === hardcodedUser.username &&
+      password === hardcodedUser.password
+    ) {
+      const user: User = {
+        id: hardcodedUser.id,
+        username: hardcodedUser.username,
       };
-      setUser(mockUser);
+      setUser(user);
       return true;
     }
     return false;

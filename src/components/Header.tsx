@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
+  const pathname = usePathname();
+
+  // Header auf der Spielseite ausblenden
+  if (pathname === "/game") {
+    return null;
+  }
 
   if (isAuthenticated && user) {
     // Angemeldeter Benutzer
