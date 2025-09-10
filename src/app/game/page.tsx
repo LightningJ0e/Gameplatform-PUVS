@@ -19,10 +19,19 @@ export default function Game() {
   );
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isRoundActive, setIsRoundActive] = useState(false);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [animatingCardIndex, setAnimatingCardIndex] = useState<number | null>(
-    null
-  );
+  const [gamePhase, setGamePhase] = useState<
+    "idle" | "ready" | "round" | "countdown"
+  >("idle");
+  const [currentRound, setCurrentRound] = useState(0);
+  const [playedCard, setPlayedCard] = useState<{
+    type: "rock" | "paper" | "scissors";
+  } | null>(null);
+  const [opponentPlayedCard, setOpponentPlayedCard] = useState<{
+    type: "rock" | "paper" | "scissors";
+  } | null>(null);
+  const [playerHearts, setPlayerHearts] = useState(2);
+  const [opponentHearts, setOpponentHearts] = useState(2);
+  const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
 
   // Spieler- und Gegnerkarten (vorläufig alle als "rock" für das Layout)
   const playerCards = ["rock", "paper", "scissors"] as const;
@@ -42,14 +51,80 @@ export default function Game() {
 
   // Funktion zum Starten der Runde
   const startRound = () => {
-    if (isRoundActive) return; // Verhindert mehrfaches Starten
+    if (isRoundActive || gamePhase !== "idle") return; // Verhindert mehrfaches Starten
 
     // Auswahl für neue Runde zurücksetzen
     setSelectedCardIndex(null);
-    setIsRoundActive(true);
-    setCountdown(3);
-    console.log("Neue Runde gestartet! Wähle eine Karte aus...");
+    setPlayedCard(null);
+    setOpponentPlayedCard(null);
+
+    // Erhöhe die Rundennummer
+    const nextRound = currentRound + 1;
+    setCurrentRound(nextRound);
+
+    // Starte die Phasen-Sequenz
+    if (currentRound === 0) {
+      // Allererste Runde: Ready -> Round -> Countdown
+      setGamePhase("ready");
+
+      // Nach 2 Sekunden: Ready -> Round
+      setTimeout(() => {
+        setGamePhase("round");
+
+        // Nach weiteren 2 Sekunden: Round -> Countdown
+        setTimeout(() => {
+          setGamePhase("countdown");
+          setIsRoundActive(true);
+          setCountdown(3);
+          console.log(
+            `Countdown gestartet für Runde ${nextRound}! Wähle eine Karte aus...`
+          );
+        }, 2000);
+      }, 2000);
+    } else {
+      // Weitere Runden: Direkt Round -> Countdown
+      setGamePhase("round");
+
+      // Nach 2 Sekunden: Round -> Countdown
+      setTimeout(() => {
+        setGamePhase("countdown");
+        setIsRoundActive(true);
+        setCountdown(3);
+        console.log(
+          `Countdown gestartet für Runde ${nextRound}! Wähle eine Karte aus...`
+        );
+      }, 2000);
+    }
   };
+
+  function handleHeartLoss(opponentCard: string, playerCard: string) {
+    // Gewinnregeln: rock > scissors, scissors > paper, paper > rock
+    const winConditions = {
+      rock: "scissors",
+      scissors: "paper",
+      paper: "rock",
+    };
+
+    if (
+      winConditions[playerCard as keyof typeof winConditions] === opponentCard
+    ) {
+      // Spieler gewinnt - Gegner verliert Herz
+      setOpponentHearts((prev) => Math.max(0, prev - 1));
+      console.log(`Spieler gewinnt! ${playerCard} besiegt ${opponentCard}`);
+      return "player";
+    } else if (
+      winConditions[opponentCard as keyof typeof winConditions] === playerCard
+    ) {
+      // Gegner gewinnt - Spieler verliert Herz
+      setPlayerHearts((prev) => Math.max(0, prev - 1));
+      console.log(`Gegner gewinnt! ${opponentCard} besiegt ${playerCard}`);
+      return "opponent";
+    } else {
+      // Unentschieden - niemand verliert Herz
+      console.log(`Unentschieden! Beide haben ${playerCard} gespielt`);
+      return "tie";
+    }
+  }
 
   // Countdown-Effekt
   useEffect(() => {
@@ -64,6 +139,7 @@ export default function Game() {
       // Countdown beendet
       setIsRoundActive(false);
       setCountdown(null);
+      setGamePhase("idle");
 
       // Prüfen ob eine Karte ausgewählt ist, wenn nicht -> zufällige auswählen
       let finalCardIndex = selectedCardIndex;
@@ -79,17 +155,51 @@ export default function Game() {
         );
       }
 
-      setIsAnimating(true);
-      setAnimatingCardIndex(finalCardIndex);
+      // Gespielte Karte setzen
+      if (finalCardIndex !== null) {
+        setPlayedCard({
+          type: playerCards[finalCardIndex],
+        });
+      }
 
-      setTimeout(() => {
-        setIsAnimating(false);
-        setAnimatingCardIndex(null);
-      }, 2000);
+      // Bot wählt zufällige Karte
+      const randomOpponentIndex = Math.floor(
+        Math.random() * opponentCards.length
+      );
+      setOpponentPlayedCard({
+        type: opponentCards[randomOpponentIndex],
+      });
+      console.log(`Bot hat ${opponentCards[randomOpponentIndex]} gewählt`);
+
+      // Gewinner ermitteln und Herzen abziehen
+      if (finalCardIndex !== null) {
+        const winner = handleHeartLoss(
+          opponentCards[randomOpponentIndex],
+          playerCards[finalCardIndex]
+        );
+      }
 
       console.log("Runde beendet!");
     }
   }, [countdown]);
+
+  // Navigation mit Animation
+  const navigateWithAnimation = (href: string) => {
+    setPageClass("page-slide-out-up");
+    setTimeout(() => {
+      router.push(href);
+    }, 500);
+  };
+
+  // Spiel-Ende-Überwachung
+  useEffect(() => {
+    if (playerHearts === 0 || opponentHearts === 0) {
+      // Nach 2 Sekunden zur Startseite
+      setTimeout(() => {
+        navigateWithAnimation("/");
+      }, 2000);
+    }
+  }, [playerHearts, opponentHearts]);
 
   // Aufdecken der Spielerkarten
   useEffect(() => {
@@ -131,13 +241,14 @@ export default function Game() {
         }
       `}</style>
 
-      {/* CSS Animation für schwebende Karte */}
       {/* Game Container */}
-      <div className="h-screen bg-slate-900 relative overflow-hidden text-white flex flex-col justify-center">
+      <div
+        className={`h-screen bg-slate-900 relative overflow-hidden text-white flex flex-col justify-center ${pageClass}`}
+      >
         {/* Opponent Profile - Top Left */}
         <PlayerProfile
           username={opponent.username}
-          hearts={opponent.hearts}
+          hearts={opponentHearts}
           position="top-left"
         />
 
@@ -145,7 +256,7 @@ export default function Game() {
         {user && (
           <PlayerProfile
             username={user.username}
-            hearts={2}
+            hearts={playerHearts}
             position="bottom-left"
             rankingPosition={1}
           />
@@ -177,18 +288,40 @@ export default function Game() {
         <div className="absolute top-16 right-1/7 p-2 ">
           <div className="text-center">
             <h1 className="text-white font-semibold text-4xl mb-6">Round</h1>
-            <span className="text-white text-6xl font-bold">1</span>
+            <span className="text-white text-6xl font-bold">
+              {currentRound}
+            </span>
           </div>
         </div>
 
         {/* Mittlere Spielbereich */}
         <div className="flex flex-col items-center justify-center gap-4 py-6 relative">
           {/* Gegner-Platzhalter (oben) */}
-          <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50"></div>
+          <div className="w-32 h-44">
+            {opponentPlayedCard ? (
+              <Card
+                type={opponentPlayedCard.type}
+                size="medium"
+                isFlipped={true}
+                isInteractive={false}
+              />
+            ) : (
+              <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50"></div>
+            )}
+          </div>
 
           {/* Spieler-Karten-Bereich */}
           <div className="relative w-32 h-44">
-            <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50"></div>
+            {playedCard ? (
+              <Card
+                type={playedCard.type}
+                size="medium"
+                isFlipped={true}
+                isInteractive={false}
+              />
+            ) : (
+              <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50"></div>
+            )}
           </div>
         </div>
 
@@ -206,11 +339,6 @@ export default function Game() {
                       ? "transform translate-y-0"
                       : "transform rotate-10 translate-y-4"
                   }
-                      ${
-                        isAnimating && animatingCardIndex === index
-                          ? "cardAnimation"
-                          : ""
-                      }
                 `}
               >
                 <Card
@@ -224,6 +352,47 @@ export default function Game() {
             ))}
           </div>
         </div>
+
+        {/* Game Phase Display - Zentriert */}
+        {gamePhase === "ready" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+            <div className="text-center">
+              <h1 className="text-white text-8xl font-bold animate-pulse">
+                Ready?
+              </h1>
+            </div>
+          </div>
+        )}
+
+        {gamePhase === "round" && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+            <div className="text-center">
+              <h1 className="text-white text-8xl font-bold animate-bounce">
+                Round {currentRound}
+              </h1>
+            </div>
+          </div>
+        )}
+
+        {opponentHearts === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+            <div className="text-center">
+              <h1 className="text-white text-8xl font-bold animate-bounce">
+                You won!
+              </h1>
+            </div>
+          </div>
+        )}
+
+        {playerHearts === 0 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+            <div className="text-center">
+              <h1 className="text-white text-8xl font-bold animate-bounce">
+                You lost!
+              </h1>
+            </div>
+          </div>
+        )}
 
         {/* Countdown Display - Rechte Seite */}
         {countdown !== null && (
@@ -250,12 +419,14 @@ export default function Game() {
             }
           `}
           >
-            {isRoundActive ? "Runde läuft..." : "Runde Starten"}
+            {isRoundActive || gamePhase !== "idle"
+              ? "Runde läuft..."
+              : "Runde Starten"}
           </button>
 
           {/* Zurück-Button */}
           <button
-            onClick={() => router.push("/")}
+            onClick={() => navigateWithAnimation("/")}
             className="w-12 h-12 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
             title="Zurück zur Hauptseite"
           >

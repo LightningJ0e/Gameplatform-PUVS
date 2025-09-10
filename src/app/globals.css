@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Globaler Hintergrund */
+html,
+body {
+  background-color: rgb(15 23 42); /* slate-900 */
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden; /* Nur horizontale Scrollbalken verhindern */
+}
+
 /* 3D Card Flip Animation */
 .preserve-3d {
   transform-style: preserve-3d;
@@ -11,4 +20,36 @@
 
 .rotate-y-180 {
   transform: rotateY(180deg);
+}
+
+.page-slide-out-up {
+  animation: slideOutUp 0.5s ease-in-out forwards;
+  background-color: rgb(15 23 42); /* slate-900 */
+}
+
+.page-slide-in-from-bottom {
+  animation: slideInFromBottom 0.5s ease-in-out forwards;
+  background-color: rgb(15 23 42); /* slate-900 */
+}
+
+@keyframes slideOutUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideInFromBottom {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
