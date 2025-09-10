@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.source="https://github.com/LightningJ0e/Gameplatf
 WORKDIR /app
 
 # Abhängigkeiten installieren
-COPY Services/RanglistenService/requirements.txt .
+COPY Services/RanglisteService/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Code und shared code kopieren
