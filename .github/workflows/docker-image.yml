@@ -38,3 +38,9 @@ jobs:
 
       - name: "Push Docker image_Game"
         run: docker push ghcr.io/lightningj0e/gameplatform-puvs/gameserviceimage:latest
+
+      - name: "Build Ranglisten image"
+        run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/ranglistenserviceimage:latest -f ./Services/RanglisteService/Dockerfile .
+
+      - name: "Push Docker image_Rangliste"
+        run: docker push ghcr.io/lightningj0e/gameplatform-puvs/ranglistenserviceimage:latest
