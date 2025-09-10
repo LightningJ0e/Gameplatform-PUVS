@@ -363,10 +363,10 @@ spec:
       targetPort: 8001  # Container-Port
       nodePort: 30081   # Node-Port (muss im Bereich 30000-32767 liegen)
 
+---
 # ------------------------------
 # Matchmaking-Service
 # ------------------------------
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -454,3 +454,52 @@ spec:
       targetPort: 8002  # Container-Port
       nodePort: 30082   # Node-Port (muss im Bereich 30000-32767 liegen)
 
+---
+# ------------------------------
+# Ranglisten-Deployment
+# ------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ranglistenservice
+  labels:
+    app: ranglistenservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ranglistenservice
+  template:
+    metadata:
+      labels:
+        app: ranglistenservice
+    spec:
+      containers:
+        - name: ranglistenservice
+          image: ghcr.io/lightningj0e/gameplatform-puvs/ranglistenserviceimage:latest
+          ports:
+            - containerPort: 8003
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# ------------------------------
+# Ranglisten-Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: ranglistenservice
+spec:
+  type: NodePort
+  selector:
+    app: ranglistenservice
+  ports:
+    - protocol: TCP
+      port: 8003        # Cluster-Port
+      targetPort: 8003  # Container-Port
+      nodePort: 30083   # Node-Port (muss im Bereich 30000-32767 liegen)
