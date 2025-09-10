@@ -110,6 +110,51 @@ spec:
     targetPort: 5432
 ---
 # ------------------------------
+# Redis Deployment
+# ------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "250m"
+            memory: "256Mi"
+---
+# ------------------------------
+# Redis Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+---
+# ------------------------------
 # Database-UI-Deployment (Adminer)
 # ------------------------------
 apiVersion: apps/v1
@@ -317,3 +362,95 @@ spec:
       port: 8001        # Cluster-Port
       targetPort: 8001  # Container-Port
       nodePort: 30081   # Node-Port (muss im Bereich 30000-32767 liegen)
+
+# ------------------------------
+# Matchmaking-Service
+# ------------------------------
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: matchmakingservice
+  labels:
+    app: matchmakingservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: matchmakingservice
+  template:
+    metadata:
+      labels:
+        app: matchmakingservice
+    spec:
+      containers:
+        - name: matchmakingservice
+          image: matchmakingserviceimage:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8002
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_SECRET
+            - name: JWT_ALG
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_ALG
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+---
+# ------------------------------
+# Matchmaking-Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: matchmakingservice
+spec:
+  type: NodePort
+  selector:
+    app: matchmakingservice
+  ports:
+    - protocol: TCP
+      port: 8002        # Cluster-Port
+      targetPort: 8002  # Container-Port
+      nodePort: 30082   # Node-Port (muss im Bereich 30000-32767 liegen)
+
