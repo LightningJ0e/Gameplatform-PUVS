@@ -7,7 +7,9 @@ import logging
 from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 import requests
+from fastapi.security import OAuth2PasswordBearer
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
 # Add sharedShit to path for imports
 sys.path.insert(0, 'sharedShit')
 from database import get_db
@@ -29,7 +31,8 @@ def get_user_elo(user_id: int,db: Session = Depends(get_db)):
 def find_match(waiting_players: list[int]):
     for j in range(len(waiting_players)):
         for k in range(len(waiting_players)):
-            if j != k:
+            # Ensure we don't match a player with themselves
+            if j != k and waiting_players[j] != waiting_players[k]:
                 player1_elo = redis_client.hget(f"user:{waiting_players[j]}", "elo")
                 player2_elo = redis_client.hget(f"user:{waiting_players[k]}", "elo")
 
@@ -69,15 +72,23 @@ def find_match(waiting_players: list[int]):
 
 @app.post("/queue/add")
 def add_player_to_queue(token: str):
-    print("get user info")
+    # Check if player is already in queue
+    current_queue = redis_client.lrange("matchmaking_queue", 0, -1)
+    if token in current_queue:
+        return {"message": "Player already in queue", "queue_position": current_queue.index(token)}
+    
     user_info = get_user_info_from_userservice(token)
     print(user_info)
     user_elo = user_info.get("elo")
+    
     redis_client.lpush("matchmaking_queue", token)
     redis_client.hset(f"user:{token}", mapping={"elo": user_elo, "join_time": time.time()})
+    
     if redis_client.llen("matchmaking_queue") >= 2:
         waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
         find_match(waiting_players)
+    
+    return {"message": "Player added to queue", "elo": user_elo}
 
 @app.get("/player_queue_info/{player_token}")
 def get_player_queue_info(player_token: str): 
@@ -143,21 +154,27 @@ def get_user_info_from_userservice(token: str):
         "Authorization": f"Bearer {token}",
         "accept": "application/json"
     }
-
     try:
         r = requests.get(f"{USERSERVICE_URL}/getUserInfo", headers=headers)
+        
+        if not r.ok:
+            logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
+            return None
 
-        return r.json()  # Return the JSON data, not the response object
+        return r.json()
 
     except Exception as e:
-        logging.exception(f"Error contacting UserService: {e}")
-        return None  # Return None on exception
+        logging.error(f"Error contacting UserService: {e}")
+        return None
 
 
 @app.post("/queue/remove")
 def remove_player_from_queue(user_id: str):
+    # Remove player from matchmaking queue
     redis_client.lrem("matchmaking_queue", 0, user_id)
-    redis_client.hdel(f"user:{user_id}")
+    # Delete user's data from Redis
+    redis_client.delete(f"user:{user_id}")
+    return {"message": f"Player {user_id} removed from queue"}
 
 @app.post("/queue/match_bot")
 def match_bot(user_id: str):
