@@ -16,4 +16,4 @@ COPY sharedShit /app/sharedShit
 COPY Services/RanglisteService /app/Services/RanglistenService
 
 # FastAPI starten
-CMD ["uvicorn", "Services.RanglisteService.main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["uvicorn", "Services.RanglisteService.Main:app", "--host", "0.0.0.0", "--port", "8003"]
