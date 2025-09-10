@@ -43,7 +43,7 @@ def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = 
 # ------------------------------
 # PlayedGames-Update 
 # ------------------------------
-@app.post("/updateGamesPlayed/{username}")
+@app.post("/updateGamesPlayed/{userID}")
 def update_GamesPlayed(playedGames: int, db: Session = Depends(get_db), token: str=Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])

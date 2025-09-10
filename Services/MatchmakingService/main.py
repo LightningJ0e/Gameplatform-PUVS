@@ -1,7 +1,6 @@
 import redis
 import time
 import json
-
 import sys
 import os
 from fastapi import FastAPI, Depends
@@ -9,13 +8,8 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 # Pfad zu sharedShit hinzufügen
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'sharedShit'))
-from database import get_db
-from models import User
-
-
-
-
-
+from sharedShit.database import get_db
+from sharedShit.models import User
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'GameService'))
 from models import Game
