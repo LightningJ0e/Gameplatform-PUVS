@@ -6,7 +6,7 @@ from sharedShit.schemas import UserOut, UserOutWinRate
 from typing import List
 from crud import getAllUsersFromUSerService
 
-app = FastAPI(title="LeaderboardService")
+app = FastAPI(title="RanglisteService")
 
 # ------------------------------
 # Rangliste nach Elo
