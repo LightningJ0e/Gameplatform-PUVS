@@ -9,3 +9,13 @@ class UserOut(BaseModel):
     games_played: int
     games_won: int
     elo: int
+
+    class Config:
+        orm_mode = True
+
+class UserOutWinRate(BaseModel):
+    username: str
+    games_played: int
+    games_won: int
+    elo: int
+    winrate: float

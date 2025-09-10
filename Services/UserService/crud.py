@@ -13,3 +13,7 @@ def create_user(db: Session, username: str, password: str):
 # gets userInfo stored in DB based on username
 def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
+
+# Fetches all users from list
+def get_all_Users(db: Session):
+    return db.query(User).all()
