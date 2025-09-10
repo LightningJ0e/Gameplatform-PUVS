@@ -30,5 +30,11 @@ jobs:
       - name: "Build UserService image"
         run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/userserviceimage:latest -f ./Services/UserService/Dockerfile .
 
-      - name: "Push Docker image"
+      - name: "Push Docker image_User"
         run: docker push ghcr.io/lightningj0e/gameplatform-puvs/userserviceimage:latest
+
+      - name: "Build GameService image"
+        run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/gameserviceimage:latest -f ./Services/GameService/Dockerfile .
+
+      - name: "Push Docker image_Game"
+        run: docker push ghcr.io/lightningj0e/gameplatform-puvs/gameserviceimage:latest

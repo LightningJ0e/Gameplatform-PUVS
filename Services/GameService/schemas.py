@@ -7,6 +7,11 @@ class Action(IntEnum):
     Paper = 1
     Scissors = 2
 
+class GameCreate(BaseModel):
+    player_id1: int
+    player_id2: int
+    mode: str
+
 class MoveIn(BaseModel):
     player_id: int = Field(..., description="Der Spieler, der die Aktion ausführt")
     action: Action = Field(..., description="0=Rock, 1=Paper, 2=Scissors")
@@ -19,7 +24,7 @@ class RoundStateOut(BaseModel):
     status: str                             # "waiting"|"complete"
 
 class GameStateOut(BaseModel):
-    game_id: int
+    id: int
     player_1_id: int
     player_2_id: int
     mode: str                                # "bo1"|"bo3"|"bo5"

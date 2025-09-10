@@ -232,3 +232,88 @@ spec:
       port: 8000        # Cluster-Port
       targetPort: 8000  # Container-Port
       nodePort: 30080   # Node-Port (muss im Bereich 30000-32767 liegen)
+---
+# ------------------------------
+# GameService-Deployment
+# ------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gameservice
+  labels:
+    app: gameservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gameservice
+  template:
+    metadata:
+      labels:
+        app: gameservice
+    spec:
+      containers:
+        - name: gameservice
+          image: ghcr.io/lightningj0e/gameplatform-puvs/gameserviceimage:latest
+          ports:
+            - containerPort: 8001
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_NAME
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_SECRET
+            - name: JWT_ALG
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: JWT_ALG
+---
+# ------------------------------
+# GameService-Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: gameservice
+spec:
+  type: NodePort
+  selector:
+    app: gameservice
+  ports:
+    - protocol: TCP
+      port: 8001        # Cluster-Port
+      targetPort: 8001  # Container-Port
+      nodePort: 30081   # Node-Port (muss im Bereich 30000-32767 liegen)

@@ -18,10 +18,8 @@ class Game(Base):
     mode = Column(String, nullable=False)            # "bo1"|"bo3"|"bo5"
     score_p1 = Column(Integer, default=0, nullable=False)
     score_p2 = Column(Integer, default=0, nullable=False)
-    status = Column(String, default="in_progress", nullable=False)
+    status = Column(String, default="open", nullable=False) # "open"|"in_progress|"finished"
     winner_player_id = Column(Integer, nullable=True)
-
-    version = Column(Integer, default=0, nullable=False)  # optimistic locking
 
 class Round(Base):
     __tablename__ = "rounds"
