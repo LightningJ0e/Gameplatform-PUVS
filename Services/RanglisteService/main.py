@@ -11,7 +11,15 @@ app = FastAPI(title="RanglisteService")
 @app.get("/leaderboard/elo", response_model=List[UserOut])
 def get_leaderboard_elo():
     userList = getAllUsersFromUSerService()
-    sorted_users = sorted(userList, key=lambda user: user["elo"], reverse=True)
+
+    users = []
+    for user in userList:
+        winrate = user["games_won"] / user["games_played"] if user["games_played"] > 0 else 0
+        winrate = round(winrate,2)
+        user["winrate"] = winrate
+        users.append(user)
+
+    sorted_users = sorted(user, key=lambda user: user["elo"], reverse=True)
     return sorted_users
 
     
@@ -25,6 +33,7 @@ def get_leaderboard_winrate():
     users = []
     for user in userList:
         winrate = user["games_won"] / user["games_played"] if user["games_played"] > 0 else 0
+        winrate = round(winrate,2)
         user["winrate"] = winrate
         users.append(user)
 
