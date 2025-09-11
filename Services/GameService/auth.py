@@ -13,20 +13,3 @@ ALGORITHM = os.getenv("JWT_ALG", "HS256")
 #Temp Code für Swagger Tests
 oauth2_scheme = HTTPBearer()
 #----------------------------
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
-    token = credentials.credentials  # hier holen wir den String aus dem Objekt
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: int = payload.get("sub")
-        if username is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token",
-            )
-        return username
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token verification failed",
-        )
