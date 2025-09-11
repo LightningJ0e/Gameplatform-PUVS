@@ -92,7 +92,7 @@ def to_game_state(db: Session, game: Game):
         .first()
     )
     return GameStateOut(
-        game_id=game.id,
+        id=game.id,
         player_1_id=game.player_1_id,
         player_2_id=game.player_2_id,
         mode=game.mode,
