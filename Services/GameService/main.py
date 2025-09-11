@@ -1,10 +1,10 @@
 from fastapi import FastAPI, Depends
-from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state
+from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, to_round_state
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
-from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate
+from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, RoundStateOut
 from Services.GameService.auth import oauth2_scheme
-from Services.GameService.crud import notify_user_service_played, create_game, get_user_info_from_userservice
+from Services.GameService.crud import create_game, get_user_info_from_userservice
 from fastapi.security import HTTPAuthorizationCredentials
 
 Base.metadata.create_all(bind=engine)
@@ -22,7 +22,6 @@ def submit_move(game_id: int,
     token: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
 
     user_info = get_user_info_from_userservice(token.credentials)
-    #print(user_info)
     player_id = user_info.get("id")
 
     game = get_game(db, game_id)
@@ -46,14 +45,23 @@ def submit_move(game_id: int,
         if game.score_p1 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
-            #notify_user_service_played(token.credentials)
         elif game.score_p2 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
-            #notify_user_service_played(token.credentials)
         else:
             create_next_round(db, game, r.round_no + 1)
 
     db.commit()
     db.refresh(game)
     return to_game_state(db, game)
+
+@app.get("/games/{game_id}/state", response_model=GameStateOut)
+def get_game_state(game_id: int, db: Session = Depends(get_db)):
+    game = get_game(db, game_id)
+    return to_game_state(db, game)
+
+@app.get("/games/{game_id}/round", response_model=RoundStateOut | None)
+def get_current_round_state(game_id: int, db: Session = Depends(get_db)):
+    game = get_game(db, game_id)
+    current = get_or_create_current_round(db, game)
+    return to_round_state(current) if current else None
