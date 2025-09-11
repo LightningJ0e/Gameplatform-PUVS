@@ -59,9 +59,3 @@ def submit_move(game_id: int,
 def get_game_state(game_id: int, db: Session = Depends(get_db)):
     game = get_game(db, game_id)
     return to_game_state(db, game)
-
-@app.get("/games/{game_id}/round", response_model=RoundStateOut | None)
-def get_current_round_state(game_id: int, db: Session = Depends(get_db)):
-    game = get_game(db, game_id)
-    current = get_or_create_current_round(db, game)
-    return to_round_state(current) if current else None
