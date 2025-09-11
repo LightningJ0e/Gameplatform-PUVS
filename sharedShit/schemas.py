@@ -15,12 +15,13 @@ class UserOut(BaseModel):
     class Config:
         orm_mode = True
 
-class UserOutWinRate(BaseModel):
+class UserOutRangListe(BaseModel):
     username: str
     games_played: int
     games_won: int
     elo: int
     winrate: float
+    rank: int
 
 class Action(IntEnum):
     Rock = 0
