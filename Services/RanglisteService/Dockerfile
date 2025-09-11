@@ -16,4 +16,4 @@ COPY sharedShit/schemas.py /app/sharedShit/schemas.py
 COPY Services/RanglisteService /app/Services/RanglisteService
 
 # FastAPI starten
-CMD ["uvicorn", "Services.RanglisteService.Main:app", "--host", "0.0.0.0", "--port", "8003"]s
+CMD ["uvicorn", "Services.RanglisteService.main:app", "--host", "0.0.0.0", "--port", "8003"]s
