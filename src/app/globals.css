@@ -24,12 +24,27 @@ body {
 
 .page-slide-out-up {
   animation: slideOutUp 0.5s ease-in-out forwards;
-  background-color: rgb(15 23 42); /* slate-900 */
+  background-color: rgb(15 23 42);
 }
 
 .page-slide-in-from-bottom {
   animation: slideInFromBottom 0.5s ease-in-out forwards;
-  background-color: rgb(15 23 42); /* slate-900 */
+  background-color: rgb(15 23 42);
+}
+
+.page-slide-out-right {
+  animation: slideOutRight 0.5s ease-in-out forwards;
+  background-color: rgb(15 23 42);
+}
+
+.page-slide-in-from-left {
+  animation: slideInFromLeft 0.5s ease-in-out forwards;
+  background-color: rgb(15 23 42);
+}
+
+.page-slide-out-left {
+  animation: slideOutLeft 0.5s ease-in-out forwards;
+  background-color: rgb(15 23 42);
 }
 
 @keyframes slideOutUp {
@@ -51,5 +66,38 @@ body {
   100% {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutLeft {
+  0% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-100%);
+    opacity: 0;
   }
 }

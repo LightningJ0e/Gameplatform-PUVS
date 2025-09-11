@@ -11,6 +11,7 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [pageClass, setPageClass] = useState("page-slide-in-from-left");
 
   const { register } = useAuth();
   const router = useRouter();
@@ -36,7 +37,10 @@ export default function Register() {
     try {
       const success = await register(username, password);
       if (success) {
-        router.push("/");
+        setPageClass("page-slide-out-right");
+        setTimeout(() => {
+          router.push("/");
+        }, 500);
       } else {
         setError("Registration failed");
       }
@@ -48,15 +52,23 @@ export default function Register() {
   };
 
   return (
-    <div className="h-full bg-slate-900 flex items-center justify-center px-4">
+    <div
+      className={`h-full bg-slate-900 flex items-center justify-center px-4 ${pageClass}`}
+    >
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="text-3xl font-bold text-white">Create your account</h2>
           <p className="mt-2 text-gray-400">
             Or{" "}
-            <Link href="/login" className="text-blue-500 hover:text-blue-400">
+            <button
+              onClick={() => {
+                setPageClass("page-slide-out-right");
+                setTimeout(() => router.push("/login"), 500);
+              }}
+              className="text-blue-500 hover:text-blue-400"
+            >
               sign in to existing account
-            </Link>
+            </button>
           </p>
         </div>
 

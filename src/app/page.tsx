@@ -4,6 +4,10 @@ import Card from "@/components/Card";
 import BackgroundGlow from "@/components/BackgroundGlow";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import Header from "@/components/Header";
+import Ranking from "@/components/Ranking";
+import PlayerProfile from "@/components/PlayerProfile";
 
 export default function Home() {
   const [hoveredCard, setHoveredCard] = useState<
@@ -11,55 +15,171 @@ export default function Home() {
   >(null);
   const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
+  const [showRanking, setShowRanking] = useState(false);
+  const [animateCards, setAnimateCards] = useState(false);
+  const [gameState, setGameState] = useState<"idle" | "searching" | "found">(
+    "idle"
+  );
 
-  const navigateWithAnimation = (href: string) => {
-    setPageClass("page-slide-out-up");
+  const navigateWithAnimationOutUp = (href: string) => {
+    setAnimateCards(true);
+    setTimeout(() => {
+      setPageClass("page-slide-out-up");
+      setTimeout(() => {
+        router.push(href);
+      }, 500);
+    }, 500);
+  };
+
+  const navigateWithAnimationSideways = (href: string) => {
+    setPageClass("page-slide-out-right");
     setTimeout(() => {
       router.push(href);
     }, 500);
+  };
+
+  const handleStartGame = () => {
+    if (isAuthenticated) {
+      setGameState("searching");
+      setTimeout(() => {
+        setGameState("found");
+
+        setTimeout(() => {
+          navigateWithAnimationOutUp("/game");
+        }, 700);
+      }, 3000);
+    } else {
+      navigateWithAnimationSideways("/login");
+    }
   };
 
   return (
     <div
       className={`h-full bg-slate-900 relative overflow-hidden ${pageClass}`}
     >
-      <BackgroundGlow hoveredCard={hoveredCard} />
-      <main className="flex flex-col items-center justify-center px-8 pt-16">
-        <div className="text-center mb-4">
-          <h1 className="text-6xl font-bold text-white mb-6">
-            Rock Paper Scissors
-          </h1>
-          <p className="text-3xl text-gray-400">
-            Be careful not to cut yourself.
-          </p>
-        </div>
-        <button
-          onClick={() => navigateWithAnimation("/game")}
-          className="px-4 py-2 bg-slate-700 rounded-lg hover:bg-slate-500 text-white text-xl m-4"
-        >
-          Start Game
-        </button>
+      <Header
+        onNavigate={navigateWithAnimationSideways}
+        setShowRanking={setShowRanking}
+        showRanking={showRanking}
+      />
+      {!showRanking && (
+        <main className="flex flex-col items-center justify-center px-8 pt-16">
+          {/*           <div>
+            <PlayerProfile
+              username="Player"
+              position="top-left"
+              rankingPosition={1}
+              hearts={0}
+            />
+          </div> */}
 
-        <div className="absolute bottom-0 left-0 right-0 h-2/5 overflow-hidden pt-20">
-          <div className="relative flex justify-center">
-            <div className="translate-y-24 overflow-visible z-10">
-              <Card type="rock" size="xxlarge" onHover={setHoveredCard} />
+          <div className="text-center mb-4">
+            <h1 className="text-6xl font-bold text-white mb-6">
+              Rock Paper Scissors
+            </h1>
+            <p className="text-3xl text-gray-400">
+              Be careful not to cut yourself.
+            </p>
+          </div>
+          <button
+            onClick={handleStartGame}
+            className="px-4 py-2 bg-slate-700 rounded-lg hover:bg-slate-500 text-white text-xl m-4"
+            disabled={gameState === "searching"}
+          >
+            {gameState === "searching"
+              ? "Searching..."
+              : gameState === "found"
+              ? "Ready"
+              : "Play Game"}
+          </button>
+          {gameState === "searching" && (
+            <div className="flex flex-col items-center mt-12">
+              <div className="relative w-16 h-16">
+                <div className="absolute w-full h-full border-4 border-blue-500 rounded-full animate-ping"></div>
+                <div
+                  className="absolute w-full h-full border-4 border-blue-300 rounded-full animate-ping"
+                  style={{ animationDelay: "0.5s" }}
+                ></div>
+                <div
+                  className="absolute w-full h-full border-4 border-blue-100 rounded-full animate-ping"
+                  style={{ animationDelay: "1s" }}
+                ></div>
+              </div>
             </div>
-            <div className="translate-y-4 -ml-16 z-20">
-              <Card type="scissors" size="xxlarge" onHover={setHoveredCard} />
-            </div>
-            <div className="-translate-y-16 -ml-20 z-30">
-              <Card type="paper" size="xxlarge" onHover={setHoveredCard} />
-            </div>
-            <div className="translate-y-4 -ml-16 z-20">
-              <Card type="rock" size="xxlarge" onHover={setHoveredCard} />
-            </div>
-            <div className="translate-y-22 -ml-12 z-10">
-              <Card type="scissors" size="xxlarge" onHover={setHoveredCard} />
-            </div>
+          )}
+        </main>
+      )}
+
+      {showRanking && <Ranking setShowRanking={setShowRanking} />}
+
+      <div
+        className={`absolute bottom-0 left-0 right-0 h-2/5 overflow-visible pt-20 transition-all duration-700 ${
+          showRanking
+            ? "translate-x-160 translate-y-10"
+            : animateCards
+            ? "-translate-y-20"
+            : "translate-y-10"
+        }`}
+      >
+        <div className="relative flex justify-center">
+          <div
+            className={` overflow-visible z-10 transition-all duration-700 ${
+              showRanking
+                ? "translate-x-90 translate-y-24"
+                : animateCards
+                ? "-translate-y-40"
+                : "translate-y-24"
+            }`}
+          >
+            <Card type="rock" size="xxlarge" onHover={setHoveredCard} />
+          </div>
+          <div
+            className={` -ml-16 z-20 transition-all duration-700 ${
+              showRanking
+                ? "translate-y-10 translate-x-70"
+                : animateCards
+                ? "-translate-y-20"
+                : "translate-y-4"
+            }`}
+          >
+            <Card type="scissors" size="xxlarge" onHover={setHoveredCard} />
+          </div>
+          <div
+            className={` -ml-20 z-30 transition-all duration-700 ${
+              showRanking
+                ? "translate-x-60 -translate-y-10"
+                : animateCards
+                ? "-translate-y-0"
+                : "-translate-y-16"
+            }`}
+          >
+            <Card type="paper" size="xxlarge" onHover={setHoveredCard} />
+          </div>
+          <div
+            className={`-ml-16 z-20 transition-all duration-700 ${
+              showRanking
+                ? "-translate-y-50 translate-x-30"
+                : animateCards
+                ? "-translate-y-20"
+                : "translate-y-4 "
+            }`}
+          >
+            <Card type="rock" size="xxlarge" onHover={setHoveredCard} />
+          </div>
+          <div
+            className={`-ml-12 z-10 transition-all duration-700 ${
+              showRanking
+                ? "-translate-y-80"
+                : animateCards
+                ? "-translate-y-40"
+                : "translate-y-22"
+            }`}
+          >
+            <Card type="scissors" size="xxlarge" onHover={setHoveredCard} />
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -4,7 +4,17 @@ import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { usePathname } from "next/navigation";
 
-export default function Header() {
+interface Props {
+  onNavigate: (href: string, animationType?: string) => void;
+  showRanking: boolean;
+  setShowRanking: (show: boolean) => void;
+}
+
+export default function Header({
+  onNavigate,
+  setShowRanking,
+  showRanking,
+}: Props) {
   const { user, isAuthenticated, logout } = useAuth();
   const pathname = usePathname();
 
@@ -21,12 +31,12 @@ export default function Header() {
           RPS Game
         </Link>
         <div className="flex items-center space-x-4">
-          <Link
-            href="/ranking"
+          <button
             className="text-gray-300 hover:text-white transition-colors"
+            onClick={() => setShowRanking(!showRanking)}
           >
             Ranking
-          </Link>
+          </button>
           <span className="text-gray-300">Hallo, {user.username}!</span>
           <button
             onClick={logout}
@@ -42,18 +52,18 @@ export default function Header() {
   // Nicht angemeldeter Benutzer
   return (
     <header className="flex justify-end space-x-4 p-6 relative z-10 bg-slate-900">
-      <Link
-        href="/login"
+      <button
+        onClick={() => onNavigate("/login", "page-slide-out-right")}
         className="px-4 py-2 border border-slate-700 rounded-lg hover:bg-slate-700 text-white"
       >
         Login
-      </Link>
-      <Link
-        href="/register"
+      </button>
+      <button
+        onClick={() => onNavigate("/register", "page-slide-out-right")}
         className="px-4 py-2 bg-slate-700 rounded-lg hover:bg-slate-500 text-white"
       >
         Register
-      </Link>
+      </button>
     </header>
   );
 }
