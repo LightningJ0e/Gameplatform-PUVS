@@ -1,10 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sharedShit.database import get_db
-from sharedShit.models import User
+from fastapi import FastAPI
 from sharedShit.schemas import UserOut, UserOutWinRate
 from typing import List
-from crud import getAllUsersFromUSerService
+from crud import getAllUsersFromUSerService, getSpecificUserFromUSerService
 
 app = FastAPI(title="RanglisteService")
 
@@ -40,11 +37,15 @@ def get_leaderboard_winrate():
 # ------------------------------
 # Rang eines bestimmten Users
 # ------------------------------
-@app.get("/leaderboard/rank", response_model=List[UserOut])
-def get_user_rank(username: str, db: Session = Depends(get_db)):
+@app.get("/leaderboard/rankElo", response_model=List[UserOut])
+def get_user_rank(token: str):
 
-    users = db.query(User).order_by(User.elo.desc()).all()
+    #WIP
+    user = getSpecificUserFromUSerService(token)
+    return user
+'''    users = db.query(User).order_by(User.elo.desc()).all()
     for rank, u in enumerate(users, start=1):
         if u.username == username:
             return {"username": u.username, "elo": u.elo, "rank": rank}
     raise HTTPException(status_code=404, detail="User not found")
+'''

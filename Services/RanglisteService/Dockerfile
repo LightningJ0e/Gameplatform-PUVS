@@ -12,8 +12,8 @@ COPY Services/RanglisteService/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Code und shared code kopieren
-COPY sharedShit /app/sharedShit
+COPY sharedShit/schemas.py /app/sharedShit/schemas.py
 COPY Services/RanglisteService /app/Services/RanglisteService
 
 # FastAPI starten
-CMD ["uvicorn", "Services.RanglisteService.Main:app", "--host", "0.0.0.0", "--port", "8003"]
+CMD ["uvicorn", "Services.RanglisteService.Main:app", "--host", "0.0.0.0", "--port", "8003"]s
