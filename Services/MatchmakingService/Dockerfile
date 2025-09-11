@@ -2,6 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+LABEL org.opencontainers.image.source="https://github.com/LightningJ0e/Gameplatform-PUVS"
 # Copy requirements first for better caching
 COPY Services/MatchmakingService/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
