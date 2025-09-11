@@ -25,9 +25,8 @@ def get_leaderboard_winrate():
     users = []
     for user in userList:
         winrate = user["games_won"] / user["games_played"] if user["games_played"] > 0 else 0
-        user_dict = user.model_dump()
-        user_dict["winrate"] = winrate
-        users.append(user_dict)
+        user["winrate"] = winrate
+        users.append(user)
 
     sorted_users = sorted(users, key=lambda u: u["winrate"], reverse=True)
 
