@@ -44,3 +44,9 @@ jobs:
 
       - name: "Push Docker image_Rangliste"
         run: docker push ghcr.io/lightningj0e/gameplatform-puvs/ranglistenserviceimage:latest
+        
+      - name: "Build Matchmaking image"
+        run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/matchmakingserviceimage:latest -f ./Services/MatchmakingService/Dockerfile .
+
+      - name: "Push Docker image_Matchmaking"
+        run: docker push ghcr.io/lightningj0e/gameplatform-puvs/matchmakingserviceimage:latest
