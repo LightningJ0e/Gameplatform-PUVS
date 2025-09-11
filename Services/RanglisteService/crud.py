@@ -11,7 +11,7 @@ def getAllUsersFromUSerService():
     }
 
     try:
-        r = requests.post(f"{USERSERVICE_URL}/getUserList", headers=headers)
+        r = requests.get(f"{USERSERVICE_URL}/getUserList", headers=headers)
 
         if not r.ok:
             logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
@@ -32,7 +32,7 @@ def getSpecificUserFromUSerService(token: str):
     }
 
     try:
-        r = requests.post(f"{USERSERVICE_URL}/getUserInfo", headers=headers)
+        r = requests.get(f"{USERSERVICE_URL}/getUserInfo", headers=headers)
 
         if not r.ok:
             logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
