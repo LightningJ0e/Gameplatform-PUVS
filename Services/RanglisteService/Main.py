@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from sharedShit.schemas import UserOut, UserOutWinRate
 from typing import List
-from crud import getAllUsersFromUSerService, getSpecificUserFromUSerService
+from Services.RanglisteService.crud import getAllUsersFromUSerService, getSpecificUserFromUSerService
 
 app = FastAPI(title="RanglisteService")
 
