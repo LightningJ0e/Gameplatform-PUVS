@@ -1,4 +1,4 @@
-from Services.GameService.schemas import GameStateOut, RoundStateOut, Action
+from sharedShit.schemas import GameStateOut, RoundStateOut, Action
 from fastapi import HTTPException, status
 from sharedShit.models import Game, Round, User
 from sqlalchemy.orm import Session

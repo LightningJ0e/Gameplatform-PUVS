@@ -14,7 +14,7 @@ def create_game(db: Session, player_id1: int, player_id2: int, mode: str):
         player_1_id=player_id1,
         player_2_id=player_id2,
         mode=mode,
-        status="open",
+        status="in_progress",
         score_p1=0,
         score_p2=0
     )
@@ -50,19 +50,20 @@ def notify_user_service_played(token: str):
     except Exception as e:
         logging.exception(f"Error contacting UserService: {e}")
 
-def notify_user_service_player_won(token: str):
+def get_user_info_from_userservice(token: str):
     headers = {
         "Authorization": f"Bearer {token}",
         "accept": "application/json"
     }
-
     try:
-        r = requests.post(f"{USERSERVICE_URL}/updateGamesWon/dummy?wonGames=1", headers=headers)
-
+        r = requests.get(f"{USERSERVICE_URL}/getUserInfo", headers=headers)
+        
         if not r.ok:
             logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
-        else:
-            logging.info(f"GamesPlayed updated: {r.json()}")
+            return None
+
+        return r.json()
 
     except Exception as e:
-        logging.exception(f"Error contacting UserService: {e}")
+        logging.error(f"Error contacting UserService: {e}")
+        return None
