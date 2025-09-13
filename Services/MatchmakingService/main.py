@@ -169,7 +169,9 @@ def remove_player_from_queue(token: str):
     return {"message": f"Player {token} removed from queue"}
 
 @app.post("/queue/match_bot")
-def match_bot(user_id: str):
-    return [user_id, "bot"]
+def match_bot(token: str):
+    user_info = get_user_info_from_userservice(token)
+    user_id = user_info.get("id")
+    send_create_game(user_id)
 
 
