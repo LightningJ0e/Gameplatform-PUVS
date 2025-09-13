@@ -385,8 +385,7 @@ spec:
     spec:
       containers:
         - name: matchmakingservice
-          image: matchmakingserviceimage:latest
-          imagePullPolicy: Never
+          image: ghcr.io/lightningj0e/gameplatform-puvs/matchmakingserviceimage:latest
           ports:
             - containerPort: 8002
           resources:
