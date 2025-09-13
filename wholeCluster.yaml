@@ -11,6 +11,8 @@ stringData:
   POSTGRES_PASSWORD: t22_game_admin
   JWT_SECRET: fvsxl6Qm2ghbsamaQr+sCgLeFWxH8ZUSAnYVtSe+zHw=
   JWT_ALG: HS256
+  BOTUSER: BOT
+  BOT_PASSWORD: botplayer
 ---
 # ------------------------------
 # Configmap: Holds connectionURL to database
@@ -260,6 +262,16 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: JWT_ALG
+            - name: BOTUSERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: BOTUSER
+            - name: BOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: BOT_PASSWORD
 ---
 # ------------------------------
 # UserService-Service

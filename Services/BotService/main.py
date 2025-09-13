@@ -5,5 +5,5 @@ app = FastAPI(title="BotService")
 
 @app.get("/botMove")
 def get_bot_move():
-    choices = ["rock", "paper", "scissors"]
+    choices = [0, 1, 2]
     return {"bot_move": random.choice(choices)}

@@ -2,10 +2,11 @@ from fastapi import FastAPI, Depends
 from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, to_round_state
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
-from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, RoundStateOut
+from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, RoundStateOut, BotGameCreate, BotGameStateOut
 from Services.GameService.auth import oauth2_scheme
-from Services.GameService.crud import create_game, get_user_info_from_userservice
+from Services.GameService.crud import create_game, get_user_info_from_userservice, create_botgame, get_BOT_info_from_userservice, get_BOT_Move
 from fastapi.security import HTTPAuthorizationCredentials
+import os
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GameService")
@@ -13,6 +14,11 @@ app = FastAPI(title="GameService")
 @app.post("/games", response_model=GameStateOut)
 def create_Game(body: GameCreate, db: Session = Depends(get_db)):
     game = create_game(db, body.player_id1, body.player_id2, body.mode)
+    return game
+
+@app.post("/gamesbot", response_model=BotGameStateOut)
+def create_Game(body: BotGameCreate, db: Session = Depends(get_db)):
+    game = create_botgame(db, body.player_id1, body.mode)
     return game
 
 @app.post("/games/{game_id}/move", response_model=GameStateOut)
@@ -29,6 +35,18 @@ def submit_move(game_id: int,
 
     r = get_or_create_current_round(db, game)
     apply_move(db, game, r, player_id, body.action)
+
+    ### RICHARDS BOT SHIT
+    
+    botInfo = get_BOT_info_from_userservice()
+    botId = botInfo.get("id")
+
+    if game.player_1_id == botId or game.player_2_id == botId:
+        data = get_BOT_Move()
+        move = data.get("bot_move")
+        apply_move(db, game, r, botId, action=Action(int(move)))
+
+    ### RICHARDS BOT SHIT
 
     # Wenn beide Züge da sind → Runde auswerten
     if r.p1_action is not None and r.p2_action is not None:
