@@ -8,7 +8,8 @@ from fastapi import FastAPI, Depends
 from sqlalchemy.orm import Session
 import requests
 from fastapi.security import OAuth2PasswordBearer
-from Services.MatchmakingService.utils import send_create_game, get_user_info_from_userservice
+# In the container, this service's code is copied into /app, so utils is a local module
+from utils import send_create_game, get_user_info_from_userservice
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
 # Add sharedShit to path for imports
