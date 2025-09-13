@@ -2,12 +2,14 @@
 
 import Card from "@/components/Card";
 import BackgroundGlow from "@/components/BackgroundGlow";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import Ranking from "@/components/Ranking";
 import PlayerProfile from "@/components/PlayerProfile";
+import Settings from "@/components/Settings";
+import SettingsButton from "@/components/SettingsButton";
 
 export default function Home() {
   const [hoveredCard, setHoveredCard] = useState<
@@ -21,6 +23,42 @@ export default function Home() {
   const [gameState, setGameState] = useState<"idle" | "searching" | "found">(
     "idle"
   );
+  const [showSettings, setShowSettings] = useState(false);
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [username, setUsername] = useState("Player");
+
+  // Load saved profile data from localStorage
+  useEffect(() => {
+    const savedImage = localStorage.getItem("profileImage");
+    const savedUsername = localStorage.getItem("username");
+
+    console.log("Loading profile data:", {
+      savedImage: !!savedImage,
+      savedUsername,
+    });
+
+    if (savedImage) {
+      setProfileImage(savedImage);
+    }
+    if (savedUsername) {
+      setUsername(savedUsername);
+    }
+  }, []);
+
+  // Function to refresh profile data after settings change
+  const refreshProfileData = () => {
+    const savedImage = localStorage.getItem("profileImage");
+    const savedUsername = localStorage.getItem("username");
+
+    console.log("Refreshing profile data:", {
+      savedImage: !!savedImage,
+      savedUsername,
+    });
+
+    setProfileImage(savedImage);
+    setUsername(savedUsername || user?.username || "Player");
+  };
+  const { user } = useAuth();
 
   const navigateWithAnimationOutUp = (href: string) => {
     setAnimateCards(true);
@@ -65,14 +103,18 @@ export default function Home() {
       />
       {!showRanking && (
         <main className="flex flex-col items-center justify-center px-8 pt-16">
-          {/*           <div>
-            <PlayerProfile
-              username="Player"
-              position="top-left"
-              rankingPosition={1}
-              hearts={0}
-            />
-          </div> */}
+          {isAuthenticated && (
+            <div className="absolute top-32 left-16 flex items-start space-x-4">
+              <PlayerProfile
+                username={username || user?.username || "Player"}
+                profileImage={profileImage || undefined}
+                position="relative"
+                rankingPosition={2}
+                hearts={0}
+              />
+              <SettingsButton setShowSettings={setShowSettings} />
+            </div>
+          )}
 
           <div className="text-center mb-4">
             <h1 className="text-6xl font-bold text-white mb-6">
@@ -112,6 +154,13 @@ export default function Home() {
       )}
 
       {showRanking && <Ranking setShowRanking={setShowRanking} />}
+
+      {showSettings && (
+        <Settings
+          setShowSettings={setShowSettings}
+          onSave={refreshProfileData}
+        />
+      )}
 
       <div
         className={`absolute bottom-0 left-0 right-0 h-2/5 overflow-visible pt-20 transition-all duration-700 ${

@@ -32,6 +32,7 @@ export default function Game() {
   const [playerHearts, setPlayerHearts] = useState(2);
   const [opponentHearts, setOpponentHearts] = useState(2);
   const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
+  const [profileImage, setProfileImage] = useState<string | null>(null);
 
   // Spieler- und Gegnerkarten (vorläufig alle als "rock" für das Layout)
   const playerCards = ["rock", "paper", "scissors"] as const;
@@ -201,19 +202,27 @@ export default function Game() {
     }
   }, [playerHearts, opponentHearts]);
 
-  // Aufdecken der Spielerkarten
+  // Load saved profile data from localStorage and setup card reveal
   useEffect(() => {
+    // Load saved profile image from localStorage
+    const savedImage = localStorage.getItem("profileImage");
+
+    if (savedImage) {
+      setProfileImage(savedImage);
+    }
+
+    // Aufdecken der Spielerkarten
     const timer1 = setTimeout(() => {
       setPlayerCardsRevealed((prev) => [true, prev[1], prev[2]]);
-    }, 500);
+    }, 800);
 
     const timer2 = setTimeout(() => {
       setPlayerCardsRevealed((prev) => [prev[0], true, prev[2]]);
-    }, 800);
+    }, 1100);
 
     const timer3 = setTimeout(() => {
       setPlayerCardsRevealed((prev) => [prev[0], prev[1], true]);
-    }, 1100);
+    }, 1400);
 
     return () => {
       clearTimeout(timer1);
@@ -249,16 +258,29 @@ export default function Game() {
         <PlayerProfile
           username={opponent.username}
           hearts={opponentHearts}
+          maxHearts={2}
           position="top-left"
+          playerId="opponent"
+          onHeartBreak={(heartIndex) => {
+            console.log(`Opponent heart ${heartIndex} broke!`);
+            // Hier können Sie zusätzliche Effekte hinzufügen
+          }}
         />
 
         {/* Player Profile - Bottom Left */}
         {user && (
           <PlayerProfile
             username={user.username}
+            profileImage={profileImage || undefined}
             hearts={playerHearts}
+            maxHearts={2}
             position="bottom-left"
             rankingPosition={1}
+            playerId="player"
+            onHeartBreak={(heartIndex) => {
+              console.log(`Player heart ${heartIndex} broke!`);
+              // Hier können Sie zusätzliche Effekte hinzufügen
+            }}
           />
         )}
 

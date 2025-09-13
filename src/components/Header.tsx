@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 
 interface Props {
   onNavigate: (href: string, animationType?: string) => void;
@@ -27,9 +28,13 @@ export default function Header({
     // Angemeldeter Benutzer
     return (
       <header className="flex justify-between items-center p-6 relative z-10 bg-slate-900">
-        <Link href="/" className="text-white text-xl font-bold">
-          RPS Game
-        </Link>
+        <div className="flex items-center space-x-2">
+          <Image src="/LogoGold.png" alt="Logo" width={30} height={100} />
+          <p className="text-xl font-bold bg-gradient-to-br from-amber-400 via-amber-200 to-amber-600 bg-clip-text text-transparent drop-shadow-lg">
+            RPS Game
+          </p>
+        </div>
+
         <div className="flex items-center space-x-4">
           <button
             className="text-gray-300 hover:text-white transition-colors"
@@ -52,6 +57,12 @@ export default function Header({
   // Nicht angemeldeter Benutzer
   return (
     <header className="flex justify-end space-x-4 p-6 relative z-10 bg-slate-900">
+      <div className="flex items-center space-x-2">
+        <Image src="/LogoGold.png" alt="Logo" width={30} height={100} />
+        <p className="text-xl font-bold bg-gradient-to-br from-amber-400 via-amber-200 to-amber-600 bg-clip-text text-transparent drop-shadow-lg">
+          RPS Game
+        </p>
+      </div>
       <button
         onClick={() => onNavigate("/login", "page-slide-out-right")}
         className="px-4 py-2 border border-slate-700 rounded-lg hover:bg-slate-700 text-white"

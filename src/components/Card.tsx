@@ -60,7 +60,7 @@ export default function Card({
 
   // Rückseiten-Design
   const cardBackDesign = {
-    gradient: "bg-gradient-to-bl from-amber-600 via-yellow-500 to-amber-600",
+    gradient: "33417A",
     shadow: "shadow-amber-500/50",
   };
 
@@ -191,24 +191,53 @@ export default function Card({
           ${cardBackDesign.gradient}
           ${cardBackDesign.shadow}
           absolute inset-0 rounded-xl p-4 overflow-hidden
-          backface-hidden rotate-y-180
+          backface-hidden rotate-y-180 border-2 border-amber-400
         `}
         style={{
           backfaceVisibility: "hidden",
           transform: "rotateY(180deg)",
         }}
       >
+        {/* Oberes linkes Schnörkel-Bild */}
+        <div className="absolute top-0.5 left-0.5 w-14 h-14">
+          <Image
+            src="/Schnörkelidu.png"
+            alt="Card Back Top Left"
+            fill
+            className="object-contain scale-y-[-1] scale-x-[-1]"
+          />
+        </div>
+
+        {/* Oberes rechtes Schnörkel-Bild */}
+        <div className="absolute bottom-0.5 right-0.5 w-14 h-14">
+          <Image
+            src="/Schnörkelidu.png"
+            alt="Card Back Top Right"
+            fill
+            className="object-contain "
+          />
+        </div>
+
         {/* Glossy Overlay Effect */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent rounded-xl" />
 
         {/* Rückseiten-Muster */}
         <div
-          className={
-            size === "xxlarge"
-              ? "absolute inset-8 border-3 border-black/20"
-              : "absolute inset-4 border-2 border-black/20"
-          }
-        ></div>
+          className={`
+            ${
+              size === "xxlarge"
+                ? "absolute inset-8 border-3 border-amber-400"
+                : "absolute inset-7 border-1 my-1 border-amber-400"
+            }
+          `}
+        >
+          <Image
+            src="/LogoGold.png"
+            alt="Card Back"
+            fill
+            className="px-2 py-5"
+          />
+        </div>
       </div>
     </div>
   );
