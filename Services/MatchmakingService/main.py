@@ -79,6 +79,7 @@ def add_player_to_queue(token: str):
     if redis_client.llen("matchmaking_queue") >= 2:
         waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
         find_match(waiting_players)
+        return {"message": "Game found instantly"}
     
     return {"message": "Player added to queue", "elo": user_elo}
 
