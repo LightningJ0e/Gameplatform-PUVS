@@ -109,12 +109,11 @@ def get_player_queue_info(player_token: str):
                 "game_timestamp": timestamp
             }
 
-        
         elif player_2 == player_token:
             complete_data = redis_client.hgetall(game_key)
             status = complete_data.get('status')
             # Gegner
-            opponent_token = complete_data.get('player1')+
+            opponent_token = complete_data.get('player1')
             opponent_elo = complete_data.get('player1_elo')
             player_token = complete_data.get('player2')
             player_elo = complete_data.get('player2_elo')
