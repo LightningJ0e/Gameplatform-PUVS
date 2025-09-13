@@ -4,10 +4,11 @@ import json
 import sys
 import os 
 import logging
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 import requests
 from fastapi.security import OAuth2PasswordBearer
+
 # In the container, this service's code is copied into /app, so utils is a local module
 from utils import send_create_game, get_user_info_from_userservice
 
@@ -59,6 +60,8 @@ def find_match(waiting_players: list[int]):
                     # Remove players from queue
                     remove_player_from_queue(player1_token)
                     remove_player_from_queue(player2_token)
+
+                    return game_data
     return None
 
 
@@ -72,12 +75,20 @@ def add_player_to_queue(token: str):
     user_info = get_user_info_from_userservice(token)
     user_elo = user_info.get("elo")
     user_id = user_info.get("id")
+    if user_elo is None or user_id is None:
+        raise HTTPException(status_code=400, detail="User info incomplete (missing elo or id)")
     
-    redis_client.lpush("matchmaking_queue", token)
-    redis_client.hset(f"user:{token}", mapping={"elo": user_elo, "join_time": time.time(), "userid": user_id})
-    
-    if redis_client.llen("matchmaking_queue") >= 2:
-        waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
+    pipe = redis_client.pipeline()
+    pipe.hset(f"user:{token}", mapping={
+        "elo": user_elo,
+        "userid": user_id,
+        "join_time": time.time(),
+    })
+    pipe.lpush("matchmaking_queue", token)
+    pipe.execute()
+
+    waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
+    if len(waiting_players) >= 2:
         find_match(waiting_players)
     
     return {"message": "Player added to queue", "elo": user_elo}
@@ -158,7 +169,9 @@ def remove_player_from_queue(token: str):
     return {"message": f"Player {token} removed from queue"}
 
 @app.post("/queue/match_bot")
-def match_bot(user_id: str):
-    return [user_id, "bot"]
+def match_bot(token: str):
+    user_info = get_user_info_from_userservice(token)
+    user_id = user_info.get("id")
+    send_create_game(user_id)
 
 

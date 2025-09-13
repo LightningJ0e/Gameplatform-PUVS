@@ -28,6 +28,29 @@ def send_create_game(player_id1: int, player_id2: int, mode: str = "bo3"):
     except Exception as e:
         logging.exception(f"Error contacting GameService: {e}")
 
+def send_create_game_bot(player_id1: int, mode: str = "bo3"):
+    headers = {
+        "Content-Type": "application/json",
+        "accept": "application/json"
+    }
+    
+    game_data = {
+        "player_id1": player_id1,
+        "mode": mode
+    }
+
+    try:
+        r = requests.post(f"{GAMESERVICE_URL}/gamesbot/", headers=headers, json=game_data)
+
+
+        if not r.ok:
+            logging.error(f"Request to GameService failed: {r.status_code} {r.text}")
+        else:
+            logging.info(f"Game successfully created")
+
+    except Exception as e:
+        logging.exception(f"Error contacting GameService: {e}")
+
 
 
 
