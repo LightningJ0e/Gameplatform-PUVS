@@ -60,6 +60,8 @@ def find_match(waiting_players: list[int]):
                     # Remove players from queue
                     remove_player_from_queue(player1_token)
                     remove_player_from_queue(player2_token)
+
+                    return game_data
     return None
 
 
@@ -84,11 +86,10 @@ def add_player_to_queue(token: str):
     })
     pipe.lpush("matchmaking_queue", token)
     pipe.execute()
-    
-    if redis_client.llen("matchmaking_queue") >= 2:
-        waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
+
+    waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
+    if len(waiting_players) >= 2:
         find_match(waiting_players)
-        return {"message": "Game found instantly"}
     
     return {"message": "Player added to queue", "elo": user_elo}
 
