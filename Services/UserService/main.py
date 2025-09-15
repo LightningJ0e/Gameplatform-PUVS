@@ -192,5 +192,5 @@ def get_userList(db: Session = Depends(get_db)):
 # ------------------------------
 @app.get("/getBotInfo", response_model=UserOut)
 def get_userList(db: Session = Depends(get_db)):
-    user = get_user_by_id(db, os.environ['BOTUSERNAME'])
+    user = get_user_by_name(db, os.environ['BOTUSERNAME'])
     return user
