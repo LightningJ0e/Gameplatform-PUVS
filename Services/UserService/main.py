@@ -161,7 +161,7 @@ def get_userInfo(token: str=Depends(oauth2_scheme), db: Session = Depends(get_db
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        db_user = get_user_by_id(db, username)
+        db_user = get_user_by_name(db, username)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
         return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
