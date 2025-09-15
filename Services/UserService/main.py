@@ -18,7 +18,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 async def lifespan(app: FastAPI, db: Session = Depends(get_db)):
     # Startup-Logik
     Base.metadata.create_all(bind=engine)
-    with SessionLocal as db:
+    with SessionLocal() as db:
 
         default_username = os.environ['BOTUSERNAME']
         default_password = os.environ['BOT_PASSWORD']
