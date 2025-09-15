@@ -11,8 +11,8 @@ def create_user(db: Session, username: str, password: str):
     return user
 
 # gets userInfo stored in DB based on username
-def get_user_by_username(db: Session, username: str):
-    return db.query(User).filter(User.username == username).first()
+def get_user_by_id(db: Session, id: int):
+    return db.query(User).filter(User.id == id).first()
 
 # Fetches all users from list
 def get_all_Users(db: Session):

@@ -2,8 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sharedShit.database import get_db, Base, engine
-from Services.UserService.crud import create_user, get_user_by_username, get_all_Users
+from sharedShit.database import get_db, Base, engine, SessionLocal
+from Services.UserService.crud import create_user, get_user_by_id, get_all_Users
 from sharedShit.schemas import UserCreate, UserOut
 from Services.UserService.auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM
 from typing import List
@@ -17,17 +17,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 @asynccontextmanager
 async def lifespan(app: FastAPI, db: Session = Depends(get_db)):
     # Startup-Logik
-    try:
-        Base.metadata.create_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    with SessionLocal as db:
 
         default_username = os.environ['BOTUSERNAME']
         default_password = os.environ['BOT_PASSWORD']
 
-        user = get_user_by_username(db, default_username)
+        user = get_user_by_id(db, default_username)
         if not user:
             create_user(db, default_username, default_password)
-    finally:
-        db.close()
 
     yield  # <- hier läuft die App
 
@@ -39,7 +37,7 @@ app = FastAPI(title="UserService",lifespan=lifespan)
 @app.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
     #TODO limit password and USername to 20 chars
-    existing_user = get_user_by_username(db, user.username)
+    existing_user = get_user_by_id(db, user.username)
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
     new_user = create_user(db, user.username, user.password)
@@ -53,7 +51,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
-    db_user = get_user_by_username(db, username)
+    db_user = get_user_by_id(db, username)
     if not db_user or not verify_password(password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": db_user.username, "id": db_user.id})
@@ -63,12 +61,10 @@ def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = 
 # PlayedGames-Update 
 # ------------------------------
 @app.post("/updateGamesPlayed", response_model=UserOut)
-def update_GamesPlayed(playedGames: int, db: Session = Depends(get_db), token: str=Depends(oauth2_scheme)):
+def update_GamesPlayed(playedGames: int, id: int, db: Session = Depends(get_db)):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        db_user = get_user_by_username(db, username)
-        if username is None or not db_user:
+        db_user = get_user_by_id(db, id)
+        if id is None or not db_user:
             raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not Found.",
@@ -97,12 +93,10 @@ def update_GamesPlayed(playedGames: int, db: Session = Depends(get_db), token: s
 # WonGames-Update 
 # ------------------------------
 @app.post("/updateGamesWon", response_model=UserOut)
-def update_GamesWon(wonGames: int, db: Session = Depends(get_db), token: str=Depends(oauth2_scheme)):
+def update_GamesWon(wonGames: int, id: int, db: Session = Depends(get_db)):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        db_user = get_user_by_username(db, username)
-        if username is None or not db_user:
+        db_user = get_user_by_id(db, id)
+        if id is None or not db_user:
             raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not Found.",
@@ -131,12 +125,10 @@ def update_GamesWon(wonGames: int, db: Session = Depends(get_db), token: str=Dep
 # Elo-Update 
 # ------------------------------
 @app.post("/updateElo", response_model=UserOut)
-def update_GamesWon(elo: int, db: Session = Depends(get_db), token: str=Depends(oauth2_scheme)):
+def update_GamesWon(elo: int, id: int, db: Session = Depends(get_db)):
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        db_user = get_user_by_username(db, username)
-        if username is None or not db_user:
+        db_user = get_user_by_id(db, id)
+        if id is None or not db_user:
             raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not Found.",
@@ -161,12 +153,15 @@ def update_GamesWon(elo: int, db: Session = Depends(get_db), token: str=Depends(
         headers={"WWW-Authenticate": "Bearer"},
         )
 
+# ------------------------------
+# Get all Userinfo
+# ------------------------------
 @app.get("/getUserInfo", response_model=UserOut)
 def get_userInfo(token: str=Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
-        db_user = get_user_by_username(db, username)
+        db_user = get_user_by_id(db, username)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
         return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
@@ -184,12 +179,18 @@ def get_userInfo(token: str=Depends(oauth2_scheme), db: Session = Depends(get_db
         headers={"WWW-Authenticate": "Bearer"},
         )
 
+# ------------------------------
+# Get all Userinfo for all Users
+# ------------------------------
 @app.get("/getUserList", response_model=List[UserOut])
 def get_userList(db: Session = Depends(get_db)):
     userList = get_all_Users(db)
     return userList
 
+# ------------------------------
+# Get BotInfo
+# ------------------------------
 @app.get("/getBotInfo", response_model=UserOut)
 def get_userList(db: Session = Depends(get_db)):
-    user = get_user_by_username(db, os.environ['BOTUSERNAME'])
+    user = get_user_by_id(db, os.environ['BOTUSERNAME'])
     return user
