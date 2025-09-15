@@ -24,7 +24,7 @@ def create_GamewithBot(body: BotGameCreate, db: Session = Depends(get_db)):
 def submit_move(game_id: int,
     body: MoveIn,
     db: Session = Depends(get_db),
-    token: HTTPAuthorizationCredentials = Depends(oauth2_scheme)):
+    token: str=Depends(oauth2_scheme)):
 
     user_info = get_user_info_from_userservice(token.credentials)
     player_id = user_info.get("id")
