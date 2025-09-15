@@ -51,7 +51,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
 def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
-    db_user = get_user_by_id(db, username)
+    db_user = get_user_by_name(db, username)
     if not db_user or not verify_password(password, db_user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": db_user.username, "id": db_user.id})
