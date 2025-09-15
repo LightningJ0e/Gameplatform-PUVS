@@ -69,7 +69,6 @@ def get_BOT_info_from_userservice():
         if not r.ok:
             logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
             return None
-        print(r.json())
         return r.json()
 
     except Exception as e:
