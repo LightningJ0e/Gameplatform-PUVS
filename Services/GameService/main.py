@@ -26,7 +26,7 @@ def submit_move(game_id: int,
     db: Session = Depends(get_db),
     token: str=Depends(oauth2_scheme)):
 
-    user_info = get_user_info_from_userservice(token.credentials)
+    user_info = get_user_info_from_userservice(token)
     player_id = user_info.get("id")
 
     game = get_game(db, game_id)
