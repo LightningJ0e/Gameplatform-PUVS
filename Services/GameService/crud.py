@@ -92,3 +92,54 @@ def get_BOT_Move():
     except Exception as e:
         logging.error(f"Error contacting UserService: {e}")
         return None
+    
+def post_eloupdate_to_userservice(id: int, elo: int):
+    headers = {
+        "accept": "application/json"
+    }
+    try:
+        r = requests.get(f"{USERSERVICE_URL}/updateElo?elo={elo}&id={id}", headers=headers)
+        
+        if not r.ok:
+            logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
+            return None
+
+        return r.json()
+
+    except Exception as e:
+        logging.error(f"Error contacting UserService: {e}")
+        return None
+    
+def post_wongamesupdate_to_userservice(id: int, wongames: int):
+    headers = {
+        "accept": "application/json"
+    }
+    try:
+        r = requests.get(f"{USERSERVICE_URL}/updateGamesWon?wonGames={wongames}&id={id}", headers=headers)
+        
+        if not r.ok:
+            logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
+            return None
+
+        return r.json()
+
+    except Exception as e:
+        logging.error(f"Error contacting UserService: {e}")
+        return None
+    
+def post_playedgamesupdate_to_userservice(id: int, playedgames: int):
+    headers = {
+        "accept": "application/json"
+    }
+    try:
+        r = requests.get(f"{USERSERVICE_URL}//updateGamesPlayed?playedGames={playedgames}&id={id}", headers=headers)
+        
+        if not r.ok:
+            logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
+            return None
+
+        return r.json()
+
+    except Exception as e:
+        logging.error(f"Error contacting UserService: {e}")
+        return None

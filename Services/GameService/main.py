@@ -4,9 +4,8 @@ from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
 from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, RoundStateOut, BotGameCreate, BotGameStateOut
 from Services.GameService.auth import oauth2_scheme
-from Services.GameService.crud import create_game, get_user_info_from_userservice, create_botgame, get_BOT_info_from_userservice, get_BOT_Move
+from Services.GameService.crud import create_game, get_user_info_from_userservice, create_botgame, get_BOT_info_from_userservice, get_BOT_Move, post_playedgamesupdate_to_userservice, post_wongamesupdate_to_userservice, post_eloupdate_to_userservice
 from fastapi.security import HTTPAuthorizationCredentials
-import os
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GameService")
@@ -37,7 +36,7 @@ def submit_move(game_id: int,
     apply_move(db, game, r, player_id, body.action)
 
     ### RICHARDS BOT SHIT
-    
+
     botInfo = get_BOT_info_from_userservice()
     botId = botInfo.get("id")
 
@@ -63,9 +62,19 @@ def submit_move(game_id: int,
         if game.score_p1 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
+            post_playedgamesupdate_to_userservice(game.player_1_id, 1)
+            post_playedgamesupdate_to_userservice(game.player_2_id, 1)
+            post_wongamesupdate_to_userservice(game.player_1_id, 1)
+            post_eloupdate_to_userservice(game.player_1_id, 30)
+            post_eloupdate_to_userservice(game.player_2_id , -30)
         elif game.score_p2 >= needed:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
+            post_playedgamesupdate_to_userservice(game.player_2_id, 1)
+            post_playedgamesupdate_to_userservice(game.player_1_id, 1)
+            post_wongamesupdate_to_userservice(game.player_2_id, 1)
+            post_eloupdate_to_userservice(game.player_2_id, 30)
+            post_eloupdate_to_userservice(game.player_1_id , -30)
         else:
             create_next_round(db, game, r.round_no + 1)
 
