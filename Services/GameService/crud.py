@@ -26,7 +26,7 @@ def create_game(db: Session, player_id1: int, player_id2: int, mode: str):
 
 def create_botgame(db: Session, player_id1: int, mode: str):
     bot_info = get_BOT_info_from_userservice
-    bot_id = bot_info.get("id")
+    bot_id = bot_info["id"]
 
     new_game = Game(
         player_1_id=player_id1,

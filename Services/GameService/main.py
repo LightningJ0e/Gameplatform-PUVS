@@ -16,7 +16,7 @@ def create_Game(body: GameCreate, db: Session = Depends(get_db)):
     return game
 
 @app.post("/gamesbot", response_model=BotGameStateOut)
-def create_Game(body: BotGameCreate, db: Session = Depends(get_db)):
+def create_GamewithBot(body: BotGameCreate, db: Session = Depends(get_db)):
     game = create_botgame(db, body.player_id1, body.mode)
     return game
 
@@ -38,11 +38,11 @@ def submit_move(game_id: int,
     ### RICHARDS BOT SHIT
 
     botInfo = get_BOT_info_from_userservice()
-    botId = botInfo.get("id")
+    botId = botInfo["id"]
 
     if game.player_1_id == botId or game.player_2_id == botId:
         data = get_BOT_Move()
-        move = data.get("bot_move")
+        move = data["bot_move"]
         apply_move(db, game, r, botId, action=Action(int(move)))
 
     ### RICHARDS BOT SHIT
