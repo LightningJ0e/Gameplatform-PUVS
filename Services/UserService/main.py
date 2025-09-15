@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sharedShit.database import get_db, Base, engine, SessionLocal
-from Services.UserService.crud import create_user, get_user_by_id, get_all_Users
+from Services.UserService.crud import create_user, get_user_by_id, get_all_Users, get_user_by_name
 from sharedShit.schemas import UserCreate, UserOut
 from Services.UserService.auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM
 from typing import List
@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI, db: Session = Depends(get_db)):
         default_username = os.environ['BOTUSERNAME']
         default_password = os.environ['BOT_PASSWORD']
 
-        user = get_user_by_id(db, default_username)
+        user = get_user_by_name(db, default_username)
         if not user:
             create_user(db, default_username, default_password)
 
@@ -125,7 +125,7 @@ def update_GamesWon(wonGames: int, id: int, db: Session = Depends(get_db)):
 # Elo-Update 
 # ------------------------------
 @app.post("/updateElo", response_model=UserOut)
-def update_GamesWon(elo: int, id: int, db: Session = Depends(get_db)):
+def update_elo(elo: int, id: int, db: Session = Depends(get_db)):
     try:
         db_user = get_user_by_id(db, id)
         if id is None or not db_user:
