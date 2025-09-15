@@ -1,0 +1,9 @@
+Rangliste:
+    - /leaderboard/specificRank --> gibt einen user mit Rang in der Rangliste zurück
+    - /leaderboard/elo --> gibt eine JSON Liste mit zurück in welcher alle SUer anch ihrere Elo sortiert drin stehen.
+
+Userservice:
+    - /login --> loggt einen user ein: Nutzername und Passwort. Returnt einen JWT Token der gespeichert werden muss
+    - /register --> erstellt einen User: Nutzername und Passwort. Returnt den angelegten Nutzer.
+    - /getUserInfo --> gibt die komplette Userinfo eines Nutzers zurück: JWT-Token. Returnt die komplette Userinfo
+
