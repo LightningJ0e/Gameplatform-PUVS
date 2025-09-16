@@ -80,7 +80,7 @@ def get_BOT_Move():
         "accept": "application/json"
     }
     try:
-        r = requests.get(f"{BOTSERVICE_URL}//botMove", headers=headers)
+        r = requests.get(f"{BOTSERVICE_URL}/botMove", headers=headers)
         
         if not r.ok:
             logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
