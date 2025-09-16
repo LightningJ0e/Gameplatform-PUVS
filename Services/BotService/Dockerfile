@@ -16,4 +16,4 @@ COPY sharedShit /app/sharedShit
 COPY Services/BotService /app/Services/BotService
 
 # FastAPI starten
-CMD ["uvicorn", "Services.BotService.main:app", "--host", "0.0.0.0", "--port", "8001"]
+CMD ["uvicorn", "Services.BotService.main:app", "--host", "0.0.0.0", "--port", "8004"]
