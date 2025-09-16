@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, OAuth2PasswordBearer
 from jose import jwt, JWTError
 import os
 
@@ -11,5 +11,6 @@ ALGORITHM = os.getenv("JWT_ALG", "HS256")
 
 #----------------------------
 #Temp Code für Swagger Tests
-oauth2_scheme = HTTPBearer()
+#oauth2_scheme = HTTPBearer()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 #----------------------------
