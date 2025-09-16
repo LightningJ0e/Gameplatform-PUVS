@@ -11,6 +11,5 @@ ALGORITHM = os.getenv("JWT_ALG", "HS256")
 
 #----------------------------
 #Temp Code für Swagger Tests
-#oauth2_scheme = HTTPBearer()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = HTTPBearer()
 #----------------------------
