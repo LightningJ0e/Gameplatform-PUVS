@@ -26,7 +26,7 @@ def get_leaderboard_elo():
         curuser["rank"] = rank
         usersRank.append(curuser)
 
-    sorted_usersRank = sorted(usersRank, key=lambda user: user["rank"], reverse=True)
+    sorted_usersRank = sorted(usersRank, key=lambda user: user["rank"], reverse=False)
     return sorted_usersRank
 
 # ------------------------------
