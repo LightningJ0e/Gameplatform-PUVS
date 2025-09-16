@@ -74,7 +74,7 @@ def update_GamesPlayed(playedGames: int, id: int, db: Session = Depends(get_db))
         db_user.games_played += playedGames
         db.commit()
         db.refresh(db_user)
-        return {"username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
+        return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
         
     except JWTError:
         raise HTTPException(
