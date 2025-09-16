@@ -519,3 +519,52 @@ spec:
       port: 8003        # Cluster-Port
       targetPort: 8003  # Container-Port
       nodePort: 30083   # Node-Port (muss im Bereich 30000-32767 liegen)
+---
+# ------------------------------
+# Bot-Deplyoment
+# ------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: botservice
+  labels:
+    app: botservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: botservice
+  template:
+    metadata:
+      labels:
+        app: botservice
+    spec:
+      containers:
+        - name: botservice
+          image: ghcr.io/lightningj0e/gameplatform-puvs/botserviceimage:latest
+          ports:
+            - containerPort: 8004
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# ------------------------------
+# Bot-Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: botservice
+spec:
+  type: NodePort
+  selector:
+    app: botservice
+  ports:
+    - protocol: TCP
+      port: 8004        # Cluster-Port
+      targetPort: 8004  # Container-Port
+      nodePort: 30084   # Node-Port (muss im Bereich 30000-32767 liegen)
