@@ -470,7 +470,6 @@ spec:
       port: 8002        # Cluster-Port
       targetPort: 8002  # Container-Port
       nodePort: 30082   # Node-Port (muss im Bereich 30000-32767 liegen)
-
 ---
 # ------------------------------
 # Ranglisten-Deployment
