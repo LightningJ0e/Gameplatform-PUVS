@@ -7,7 +7,7 @@ WORKDIR /app
 # Install dependencies (including devDependencies for build)
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY rps/package.json rps/package-lock.json ./
 RUN npm ci
 
 # Build the Next.js application
@@ -22,7 +22,7 @@ RUN npm run build
 FROM base AS prod-deps
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json ./
+COPY rps/package.json rps/package-lock.json ./
 RUN npm prune --omit=dev
 
 # Production runtime image
@@ -40,7 +40,7 @@ USER node
 COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/public ./public
-COPY --chown=node:node rps/package.json rps/package.json
+COPY --chown=node:node rps/package.json ./package.json
 
 EXPOSE 3000
 
