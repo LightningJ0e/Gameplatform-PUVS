@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey,LargeBinary
 from sharedShit.database import Base
 
 class User(Base):
@@ -9,6 +9,7 @@ class User(Base):
     games_played = Column(Integer, default=0)
     games_won = Column(Integer, default=0)
     elo = Column(Integer, default=500)
+    picture = Column(LargeBinary)
 
 class Game(Base):
     __tablename__ = "games"

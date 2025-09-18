@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -9,6 +9,7 @@ from Services.UserService.auth import verify_password, create_access_token, SECR
 from typing import List
 from contextlib import asynccontextmanager
 import os
+from fastapi.responses import Response
 
 # Tabellen erzeugen, falls noch nicht vorhanden
 Base.metadata.create_all(bind=engine)
@@ -194,3 +195,36 @@ def get_userList(db: Session = Depends(get_db)):
 def get_userList(db: Session = Depends(get_db)):
     user = get_user_by_name(db, os.environ['BOTUSERNAME'])
     return user
+
+# ------------------------------
+# Set Userpicture
+# ------------------------------
+@app.post("/users/{user_id}/upload_image")
+async def upload_image(token: str=Depends(oauth2_scheme), file: UploadFile = File(...), db: Session = Depends(get_db)):
+
+    MAX_SIZE = 2*1024*1024  # 2mb
+
+    if file.content_type not in ["image/jpeg", "image/png"]:
+        raise HTTPException(status_code=400, detail="Only JPEG/PNG images allowed")
+
+    content = await file.read()
+    if len(content) > MAX_SIZE:
+        raise HTTPException(status_code=400, detail="File too large (max 2MB)")
+    
+    user = get_userInfo(token, db)
+    id = user["id"]
+    db_user = get_user_by_id(db, id)
+    db_user.picture = content
+    db.commit()
+    db.refresh(db_user)
+    return {"message": "Image uploaded"}
+
+
+@app.get("/users/{user_id}/image")
+def get_user_image(user_id: int, db: Session = Depends(get_db)):
+    db_user = get_user_by_id(db, user_id)
+    if not db_user or not db_user.picture:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    # Annahme: wir speichern PNG oder JPEG
+    return Response(content=db_user.picture, media_type="image/png")
