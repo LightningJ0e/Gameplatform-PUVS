@@ -26,8 +26,7 @@ def get_leaderboard_elo():
         curuser["rank"] = rank
         usersRank.append(curuser)
 
-    sorted_usersRank = sorted(usersRank, key=lambda user: user["rank"], reverse=True)
-    return sorted_usersRank
+    return usersRank
 
 # ------------------------------
 # Rang eines bestimmten Users
@@ -36,7 +35,7 @@ def get_leaderboard_elo():
 def get_user_rank(token: str):
 
     userList = getAllUsersFromUSerService()
-    user = getSpecificUserFromUSerService(token)
+    specific_user = getSpecificUserFromUSerService(token)
 
     users = []
     for u in userList:
@@ -49,7 +48,7 @@ def get_user_rank(token: str):
 
     for rank, curuser in enumerate(sorted_users, start=1):
         curuser["Rank"] = rank
-        if curuser["username"] == user["username"]:
+        if curuser["username"] == specific_user["username"]:
             return curuser
         else:
             raise HTTPException(status_code=404, detail="User not found")

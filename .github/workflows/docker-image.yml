@@ -50,3 +50,10 @@ jobs:
 
       - name: "Push Docker image_Matchmaking"
         run: docker push ghcr.io/lightningj0e/gameplatform-puvs/matchmakingserviceimage:latest
+
+      - name: "Build Bot image"
+        run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/botserviceimage:latest -f ./Services/BotService/Dockerfile .
+
+      - name: "Push Docker image_Bot"
+        run: docker push ghcr.io/lightningj0e/gameplatform-puvs/botserviceimage:latest
+

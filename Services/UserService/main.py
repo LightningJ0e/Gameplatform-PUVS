@@ -37,7 +37,7 @@ app = FastAPI(title="UserService",lifespan=lifespan)
 @app.post("/register", response_model=UserOut)
 def register(user: UserCreate, db: Session = Depends(get_db)):
     #TODO limit password and USername to 20 chars
-    existing_user = get_user_by_id(db, user.username)
+    existing_user = get_user_by_name(db, user.username)
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
     new_user = create_user(db, user.username, user.password)
@@ -74,7 +74,7 @@ def update_GamesPlayed(playedGames: int, id: int, db: Session = Depends(get_db))
         db_user.games_played += playedGames
         db.commit()
         db.refresh(db_user)
-        return {"username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
+        return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
         
     except JWTError:
         raise HTTPException(
