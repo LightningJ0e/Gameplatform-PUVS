@@ -4,6 +4,9 @@
 FROM node:20-bookworm-slim AS base
 WORKDIR /app
 
+#Label the Image to make it public in repo
+LABEL org.opencontainers.image.source="https://github.com/LightningJ0e/Gameplatform-PUVS"
+
 # Install dependencies (including devDependencies for build)
 FROM base AS deps
 WORKDIR /app
