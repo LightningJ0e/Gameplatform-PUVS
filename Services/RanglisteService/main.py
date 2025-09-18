@@ -39,13 +39,13 @@ def get_user_rank(token: str):
     user = getSpecificUserFromUSerService(token)
 
     users = []
-    for user in userList:
-        winrate = user["games_won"] / user["games_played"] if user["games_played"] > 0 else 0
+    for u in userList:
+        winrate = u["games_won"] / u["games_played"] if u["games_played"] > 0 else 0
         winrate = round(winrate,2)
-        user["winrate"] = winrate
-        users.append(user)
+        u["winrate"] = winrate
+        users.append(u)
 
-    sorted_users = sorted(user, key=lambda user: user["elo"], reverse=True)
+    sorted_users = sorted(users, key=lambda user: user["elo"], reverse=True)
 
     for rank, curuser in enumerate(sorted_users, start=1):
         curuser["Rank"] = rank
