@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install dependencies (including devDependencies for build)
 FROM base AS deps
-COPY package.json package-lock.json ./
+COPY rps/package.json rps/package-lock.json ./
 RUN npm ci
 
 # Build the Next.js application
@@ -19,7 +19,7 @@ RUN npm run build
 # Create production-only node_modules to shrink runtime image
 FROM base AS prod-deps
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json package-lock.json ./
+COPY rps/package.json rps/package-lock.json ./
 RUN npm prune --omit=dev
 
 # Production runtime image
