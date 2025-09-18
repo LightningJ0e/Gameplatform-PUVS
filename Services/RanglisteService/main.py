@@ -50,6 +50,6 @@ def get_user_rank(token: str):
         curuser["Rank"] = rank
         if curuser["username"] == specific_user["username"]:
             return curuser
-        else:
-            raise HTTPException(status_code=404, detail="User not found")
+    
+    raise HTTPException(status_code=404, detail="User not found")
 
