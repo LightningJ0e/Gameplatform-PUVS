@@ -6,11 +6,13 @@ WORKDIR /app
 
 # Install dependencies (including devDependencies for build)
 FROM base AS deps
-COPY rps/package.json rps/package-lock.json ./
+WORKDIR /app
+COPY package.json package-lock.json ./
 RUN npm ci
 
 # Build the Next.js application
 FROM base AS builder
+WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -18,19 +20,20 @@ RUN npm run build
 
 # Create production-only node_modules to shrink runtime image
 FROM base AS prod-deps
+WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY rps/package.json rps/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm prune --omit=dev
 
 # Production runtime image
 FROM node:20-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
-	NEXT_TELEMETRY_DISABLED=1 \
-	PORT=3000 \
-	HOSTNAME=0.0.0.0
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
-# Use non-root user provided by the Node image
+# Use non-root user
 USER node
 
 # Copy only what's needed to run `next start`
@@ -42,4 +45,3 @@ COPY --chown=node:node /app/package.json ./package.json
 EXPOSE 3000
 
 CMD ["npm", "run", "start"]
-
