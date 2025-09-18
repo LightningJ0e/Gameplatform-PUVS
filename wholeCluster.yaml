@@ -590,7 +590,7 @@ spec:
     spec:
       containers:
         - name: frontendservice
-          image: ghcr.io/lightningj0e/gameplatform-puvs&frontendserviceimage:latest
+          image: ghcr.io/lightningj0e/gameplatform-puvs/frontendserviceimage:latest
           ports:
             - containerPort: 3000
           resources:
