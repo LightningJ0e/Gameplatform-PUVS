@@ -589,8 +589,8 @@ spec:
         app: frontendservice
     spec:
       containers:
-        - name: freontend
-          image: ghcr.io/lightningj0e/gameplatform-puvs/frontendservice:latest
+        - name: frontendservice
+          image: ghcr.io/lightningj0e/gameplatform-puvs/frontendserviceimage:latest
           ports:
             - containerPort: 3000
           resources:

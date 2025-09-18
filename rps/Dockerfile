@@ -18,7 +18,7 @@ FROM base AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY /rps .
 RUN npm run build
 
 # Create production-only node_modules to shrink runtime image
