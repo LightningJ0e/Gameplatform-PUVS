@@ -568,3 +568,52 @@ spec:
       port: 8004        # Cluster-Port
       targetPort: 8004  # Container-Port
       nodePort: 30084   # Node-Port (muss im Bereich 30000-32767 liegen)
+---
+# ------------------------------
+# Frontend-Deplyoment
+# ------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontendservice
+  labels:
+    app: frontendservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontendservice
+  template:
+    metadata:
+      labels:
+        app: frontendservice
+    spec:
+      containers:
+        - name: freontend
+          image: ghcr.io/lightningj0e/gameplatform-puvs/frontendservice:latest
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+# ------------------------------
+# Frontend-Service
+# ------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontendservice
+spec:
+  type: NodePort
+  selector:
+    app: frontendservice
+  ports:
+    - protocol: TCP
+      port: 8004        # Cluster-Port
+      targetPort: 8004  # Container-Port
+      nodePort: 30085   # Node-Port (muss im Bereich 30000-32767 liegen)
