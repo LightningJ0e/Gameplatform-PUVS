@@ -47,7 +47,7 @@ def get_user_rank(token: str):
     sorted_users = sorted(users, key=lambda user: user["elo"], reverse=True)
 
     for rank, curuser in enumerate(sorted_users, start=1):
-        curuser["Rank"] = rank
+        curuser["rank"] = rank
         if curuser["username"] == specific_user["username"]:
             return curuser
     
