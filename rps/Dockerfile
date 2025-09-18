@@ -37,7 +37,7 @@ USER node
 COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
 COPY --chown=node:node --from=builder /app/.next ./.next
 COPY --chown=node:node --from=builder /app/public ./public
-COPY --chown=node:node package.json ./package.json
+COPY --chown=node:node /app/package.json ./package.json
 
 EXPOSE 3000
 
