@@ -94,7 +94,7 @@ def add_player_to_queue(token: str):
     return {"message": "Player added to queue", "elo": user_elo}
 
 
-@app.get("/player_queue_info/{player_token}")
+@app.get("/player_queue_info/get_info")
 def get_player_queue_info(player_token: str): 
     all_games = redis_client.keys("game_*") 
     
