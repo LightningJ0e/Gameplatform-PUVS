@@ -1,6 +1,10 @@
 from sqlalchemy import Column, Integer, String, ForeignKey,LargeBinary
 from sharedShit.database import Base
 
+def get_default_image():
+    with open("sharedShit/STP-avatar.png", "rb") as f:
+        return f.read()
+
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
@@ -9,7 +13,7 @@ class User(Base):
     games_played = Column(Integer, default=0)
     games_won = Column(Integer, default=0)
     elo = Column(Integer, default=500)
-    picture = Column(LargeBinary)
+    picture = Column(LargeBinary, default=get_default_image())
 
 class Game(Base):
     __tablename__ = "games"
