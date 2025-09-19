@@ -58,7 +58,7 @@ jobs:
         run: docker push ghcr.io/lightningj0e/gameplatform-puvs/botserviceimage:latest
 
       - name: "Build Frontend image"
-        run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/frontendservice:latest -f ./rps/Dockerfile .
+        run: docker build -t ghcr.io/lightningj0e/gameplatform-puvs/frontendserviceimage:latest -f ./rps/Dockerfile .
 
       - name: "Push Docker image_Frontend"
         run: docker push ghcr.io/lightningj0e/gameplatform-puvs/frontendserviceimage:latest
