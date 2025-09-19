@@ -11,6 +11,8 @@ interface PlayerProfileProps {
   maxHearts?: number;
   onHeartBreak?: (heartIndex: number) => void;
   playerId?: string;
+  elo?: number;
+  winrate?: number;
 }
 
 export default function PlayerProfile({
@@ -22,6 +24,8 @@ export default function PlayerProfile({
   maxHearts = 2,
   onHeartBreak,
   playerId = "player",
+  elo,
+  winrate,
 }: PlayerProfileProps) {
   console.log("PlayerProfile received:", {
     username,
@@ -188,6 +192,18 @@ export default function PlayerProfile({
           </div>
         )}
       </div>
+
+      {/* Elo und Winrate */}
+      {elo && winrate && (
+        <div className="flex flex-col">
+          <span className="text-white font-semibold text-lg p-1">
+            Elo: {elo}
+          </span>
+          <span className="text-white font-semibold text-lg p-1">
+            Winrate: {winrate}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

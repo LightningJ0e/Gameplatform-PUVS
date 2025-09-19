@@ -21,30 +21,35 @@ export default function Register() {
     setIsLoading(true);
     setError("");
 
-    // Validierung
-    if (password !== confirmPassword) {
+    const u = username.trim();
+    const p = password.trim();
+    const cp = confirmPassword.trim();
+
+    if (p !== cp) {
       setError("Passwords do not match");
       setIsLoading(false);
       return;
     }
-
-    if (password.length < 6) {
+    if (p.length < 6) {
       setError("Password must be at least 6 characters");
       setIsLoading(false);
       return;
     }
 
     try {
-      const success = await register(username, password);
-      if (success) {
-        setPageClass("page-slide-out-right");
-        setTimeout(() => {
-          router.push("/");
-        }, 500);
-      } else {
-        setError("Registration failed");
+      console.log("Register page: Starting registration process");
+      const success = await register(u, p);
+
+      if (!success) {
+        console.log("Register page: Registration failed");
+        setError("Registration failed. Username might already exist.");
+        return;
       }
+
+      console.log("Register page: Registration successful, redirecting");
+      router.push("/");
     } catch (err) {
+      console.log("Register page: Error during registration:", err);
       setError("An error occurred during registration");
     } finally {
       setIsLoading(false);
@@ -72,7 +77,11 @@ export default function Register() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+        <form
+          className="mt-8 space-y-6"
+          onSubmit={handleSubmit}
+          autoComplete="off"
+        >
           <div className="space-y-4">
             <div>
               <label
@@ -90,6 +99,8 @@ export default function Register() {
                 onChange={(e) => setUsername(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Choose a username"
+                autoComplete="username"
+                inputMode="text"
               />
             </div>
 
@@ -109,6 +120,7 @@ export default function Register() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Choose a password (min. 6 characters)"
+                autoComplete="new-password"
               />
             </div>
 
@@ -128,6 +140,7 @@ export default function Register() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded-md text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Confirm your password"
+                autoComplete="new-password"
               />
             </div>
           </div>

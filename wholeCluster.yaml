@@ -45,55 +45,55 @@ spec:
         app: postgres
     spec:
       containers:
-      - name: postgres
-        image: postgres:16
-        ports:
-        - containerPort: 5432
-          name: postgres
-        env:
-        - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: secrets
-              key: POSTGRES_USER
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: secrets
-              key: POSTGRES_PASSWORD
-        - name: POSTGRES_DB
-          valueFrom:
-            configMapKeyRef:
-              name: db-config
-              key: DB_NAME
-        volumeMounts:
-        - name: pg-data
-          mountPath: /var/lib/postgresql/data
-        readinessProbe:
-          exec:
-            command: ["pg_isready","-U","game_db_admin","-d","game_db"]
-          initialDelaySeconds: 5
-          periodSeconds: 5
-        livenessProbe:
-          exec:
-            command: ["pg_isready","-U","game_db_admin","-d","game_db"]
-          initialDelaySeconds: 15
-          periodSeconds: 10
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: secrets
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: DB_NAME
+          volumeMounts:
+            - name: pg-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "game_db_admin", "-d", "game_db"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "game_db_admin", "-d", "game_db"]
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+  volumeClaimTemplates:
+    - metadata:
+        name: pg-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            cpu: "100m"
-            memory: "256Mi"
-          limits:
-            cpu: "500m"
-            memory: "512Mi"
-  volumeClaimTemplates:
-  - metadata:
-      name: pg-data
-    spec:
-      accessModes: ["ReadWriteOnce"]
-      resources:
-        requests:
-          storage: 5Gi
+            storage: 5Gi
 ---
 # ------------------------------
 # Database Service
@@ -107,9 +107,9 @@ spec:
   selector:
     app: postgres
   ports:
-  - name: postgres
-    port: 5432
-    targetPort: 5432
+    - name: postgres
+      port: 5432
+      targetPort: 5432
 ---
 # ------------------------------
 # Redis Deployment
@@ -129,17 +129,17 @@ spec:
         app: redis
     spec:
       containers:
-      - name: redis
-        image: redis:7-alpine
-        ports:
-        - containerPort: 6379
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
+        - name: redis
+          image: redis:7-alpine
+          ports:
+            - containerPort: 6379
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
 ---
 # ------------------------------
 # Redis Service
@@ -152,8 +152,8 @@ spec:
   selector:
     app: redis
   ports:
-  - port: 6379
-    targetPort: 6379
+    - port: 6379
+      targetPort: 6379
   type: ClusterIP
 ---
 # ------------------------------
@@ -172,14 +172,14 @@ spec:
       labels: { app: adminer }
     spec:
       containers:
-      - name: adminer
-        image: adminer:latest
-        env:
-        - name: ADMINER_DEFAULT_SERVER
-          value: postgres
-        ports:
-        - containerPort: 8080
-        resources:
+        - name: adminer
+          image: adminer:latest
+          env:
+            - name: ADMINER_DEFAULT_SERVER
+              value: postgres
+          ports:
+            - containerPort: 8080
+          resources:
             requests:
               cpu: "250m"
               memory: "256Mi"
@@ -198,8 +198,8 @@ spec:
   selector:
     app: adminer
   ports:
-  - port: 8080
-    targetPort: 8080
+    - port: 8080
+      targetPort: 8080
   type: ClusterIP
 ---
 # ------------------------------
@@ -293,9 +293,9 @@ spec:
     app: userservice
   ports:
     - protocol: TCP
-      port: 8000        # Cluster-Port
-      targetPort: 8000  # Container-Port
-      nodePort: 30080   # Node-Port (muss im Bereich 30000-32767 liegen)
+      port: 8000 # Cluster-Port
+      targetPort: 8000 # Container-Port
+      nodePort: 30080 # Node-Port (muss im Bereich 30000-32767 liegen)
 ---
 # ------------------------------
 # GameService-Deployment
@@ -378,9 +378,9 @@ spec:
     app: gameservice
   ports:
     - protocol: TCP
-      port: 8001        # Cluster-Port
-      targetPort: 8001  # Container-Port
-      nodePort: 30081   # Node-Port (muss im Bereich 30000-32767 liegen)
+      port: 8001 # Cluster-Port
+      targetPort: 8001 # Container-Port
+      nodePort: 30081 # Node-Port (muss im Bereich 30000-32767 liegen)
 ---
 # ------------------------------
 # Matchmaking-Service
@@ -467,9 +467,9 @@ spec:
     app: matchmakingservice
   ports:
     - protocol: TCP
-      port: 8002        # Cluster-Port
-      targetPort: 8002  # Container-Port
-      nodePort: 30082   # Node-Port (muss im Bereich 30000-32767 liegen)
+      port: 8002 # Cluster-Port
+      targetPort: 8002 # Container-Port
+      nodePort: 30082 # Node-Port (muss im Bereich 30000-32767 liegen)
 ---
 # ------------------------------
 # Ranglisten-Deployment
@@ -516,9 +516,9 @@ spec:
     app: ranglistenservice
   ports:
     - protocol: TCP
-      port: 8003        # Cluster-Port
-      targetPort: 8003  # Container-Port
-      nodePort: 30083   # Node-Port (muss im Bereich 30000-32767 liegen)
+      port: 8003 # Cluster-Port
+      targetPort: 8003 # Container-Port
+      nodePort: 30083 # Node-Port (muss im Bereich 30000-32767 liegen)
 ---
 # ------------------------------
 # Bot-Deplyoment
@@ -565,9 +565,9 @@ spec:
     app: botservice
   ports:
     - protocol: TCP
-      port: 8004        # Cluster-Port
-      targetPort: 8004  # Container-Port
-      nodePort: 30084   # Node-Port (muss im Bereich 30000-32767 liegen)
+      port: 8004 # Cluster-Port
+      targetPort: 8004 # Container-Port
+      nodePort: 30084 # Node-Port (muss im Bereich 30000-32767 liegen)
 ---
 # ------------------------------
 # Frontend-Deplyoment
@@ -614,6 +614,6 @@ spec:
     app: frontendservice
   ports:
     - protocol: TCP
-      port: 8004        # Cluster-Port
-      targetPort: 8004  # Container-Port
-      nodePort: 30085   # Node-Port (muss im Bereich 30000-32767 liegen)
+      port: 3000 # Cluster-Port
+      targetPort: 3000 # Container-Port
+      nodePort: 30085 # Node-Port (muss im Bereich 30000-32767 liegen)
