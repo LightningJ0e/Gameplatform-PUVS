@@ -22,7 +22,7 @@ def create_game(db: Session, player_id1: int, player_id2: int, mode: str):
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
-    return {"game_id": new_game.id}
+    return new_game
 
 def create_botgame(db: Session, player_id1: int, mode: str):
     bot_info = get_BOT_info_from_userservice()
@@ -39,7 +39,7 @@ def create_botgame(db: Session, player_id1: int, mode: str):
     db.add(new_game)
     db.commit()
     db.refresh(new_game)
-    return {"game_id": new_game.id}
+    return new_game
 
 def get_user_info_from_userservice(token: str):
     headers = {
