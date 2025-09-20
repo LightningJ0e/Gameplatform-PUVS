@@ -17,44 +17,25 @@ export default function Ranking({
   const [pageClass, setPageClass] = useState("page-slide-in-from-left");
   const [players, setPlayers] = useState<Player[]>([]);
 
-  // Mock-Daten für das Ranking
   useEffect(() => {
-    const mockPlayers: Player[] = [
-      {
-        id: 1,
-        username: "PlayerOne",
-        score: 2450,
-        profileImage: "/avatars/player1.jpg",
-      },
-      {
-        id: 2,
-        username: "RockMaster",
-        score: 2380,
-        profileImage: "/avatars/player2.jpg",
-      },
-      {
-        id: 3,
-        username: "ScissorKing",
-        score: 2210,
-        profileImage: "/avatars/player3.jpg",
-      },
-      {
-        id: 4,
-        username: "PaperQueen",
-        score: 1950,
-        profileImage: "/avatars/player4.jpg",
-      },
-      {
-        id: 5,
-        username: "GamePro",
-        score: 1820,
-        profileImage: "/avatars/player5.jpg",
-      },
-    ];
-
-    // Nach Score sortieren (höchste zuerst)
-    const sortedPlayers = mockPlayers.sort((a, b) => b.score - a.score);
-    setPlayers(sortedPlayers);
+    let active = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/ranking", { cache: "no-store" });
+        if (!res.ok) throw new Error("Failed to load ranking");
+        const data = (await res.json()) as Player[];
+        if (!active) return;
+        // Sicherstellen: absteigend nach score
+        setPlayers([...data].sort((a, b) => b.score - a.score));
+      } catch (e) {
+        // Optional: Fehlerzustand setzen/anzeigen
+        console.error(e);
+        if (active) setPlayers([]);
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const navigateBack = () => {
@@ -170,7 +151,7 @@ export default function Ranking({
                   <div className="text-2xl font-bold text-white">
                     {player.score.toLocaleString()}
                   </div>
-                  <div className="text-gray-400">Points</div>
+                  <div className="text-gray-400">Elo</div>
                 </div>
               </div>
             );

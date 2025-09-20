@@ -1,7 +1,6 @@
 "use client";
 
 import Card from "@/components/Card";
-import BackgroundGlow from "@/components/BackgroundGlow";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -17,7 +16,7 @@ export default function Home() {
   >(null);
   const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [showRanking, setShowRanking] = useState(false);
   const [animateCards, setAnimateCards] = useState(false);
   const [gameState, setGameState] = useState<"idle" | "searching" | "found">(
@@ -49,16 +48,9 @@ export default function Home() {
   const refreshProfileData = () => {
     const savedImage = localStorage.getItem("profileImage");
     const savedUsername = localStorage.getItem("username");
-
-    console.log("Refreshing profile data:", {
-      savedImage: !!savedImage,
-      savedUsername,
-    });
-
     setProfileImage(savedImage);
     setUsername(savedUsername || user?.username || "Player");
   };
-  const { user } = useAuth();
 
   const navigateWithAnimationOutUp = (href: string) => {
     setAnimateCards(true);
@@ -77,18 +69,49 @@ export default function Home() {
     }, 500);
   };
 
-  const handleStartGame = () => {
-    if (isAuthenticated) {
+  const handleStartGame = async () => {
+    if (!isAuthenticated) {
+      navigateWithAnimationSideways("/login");
+      return;
+    }
+
+    try {
+      console.log("Home: Starting matchmaking process");
       setGameState("searching");
+
+      const response = await fetch("/api/matchmaking/queue", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Home: Matchmaking response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.log("Home: Matchmaking failed:", errorData);
+        setGameState("idle");
+        // TODO: Show error message to user
+        return;
+      }
+
+      const data = await response.json();
+      console.log("Home: Successfully joined queue:", data);
+
+      // Simulate finding a match after 3 seconds
+      // TODO: Replace with actual match status polling
       setTimeout(() => {
         setGameState("found");
-
         setTimeout(() => {
           navigateWithAnimationOutUp("/game");
         }, 700);
       }, 3000);
-    } else {
-      navigateWithAnimationSideways("/login");
+    } catch (error) {
+      console.log("Home: Error during matchmaking:", error);
+      setGameState("idle");
+      // TODO: Show error message to user
     }
   };
 
@@ -103,14 +126,16 @@ export default function Home() {
       />
       {!showRanking && (
         <main className="flex flex-col items-center justify-center px-8 pt-16">
-          {isAuthenticated && (
+          {isAuthenticated && user && (
             <div className="absolute top-32 left-16 flex items-start space-x-4">
               <PlayerProfile
-                username={username || user?.username || "Player"}
+                username={user.username || username || "Player"}
                 profileImage={profileImage || undefined}
                 position="relative"
-                rankingPosition={2}
+                rankingPosition={user.rank}
                 hearts={0}
+                elo={user.elo}
+                winrate={user.winrate}
               />
               <SettingsButton setShowSettings={setShowSettings} />
             </div>

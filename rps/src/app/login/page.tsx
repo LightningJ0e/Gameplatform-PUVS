@@ -15,15 +15,24 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    const success = await login(username, password);
-    if (success) {
+    try {
+      console.log("Login page: Starting login process");
+      const success = await login(username, password);
+
+      if (!success) {
+        console.log("Login page: Login failed");
+        setError("Invalid username or password");
+        return;
+      }
+
+      console.log("Login page: Login successful, redirecting");
       setPageClass("page-slide-out-right");
-      setTimeout(() => {
-        router.push("/");
-      }, 500);
-    } else {
-      setError("Invalid username or password");
+      setTimeout(() => router.push("/"), 500);
+    } catch (err) {
+      console.log("Login page: Error during login:", err);
+      setError("An error occurred during login");
     }
   };
 
