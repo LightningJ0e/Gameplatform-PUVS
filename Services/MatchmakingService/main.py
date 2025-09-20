@@ -172,7 +172,9 @@ def remove_player_from_queue(token: str):
 def match_bot(token: str):
     user_info = get_user_info_from_userservice(token)
     user_id = user_info.get("id")
-    game_id = send_create_game_bot(user_id)
-    return game_id
+    game_data = send_create_game_bot(user_id)
+    if not game_data or "id" not in game_data:
+        raise HTTPException(status_code=500, detail="Game creation failed or invalid response from GameService")
+    return {"game_id": game_data["id"]}
 
 
