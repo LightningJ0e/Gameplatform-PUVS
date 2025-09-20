@@ -1,7 +1,7 @@
 "use client";
 
 import Card from "@/components/Card";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
@@ -25,6 +25,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [username, setUsername] = useState("Player");
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load saved profile data from localStorage
   useEffect(() => {
@@ -52,6 +53,121 @@ export default function Home() {
     setUsername(savedUsername || user?.username || "Player");
   };
 
+  // Cleanup polling interval on component unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Function to check matchmaking status
+  const checkMatchmakingStatus = async (): Promise<boolean> => {
+    try {
+      console.log("Home: Checking matchmaking status");
+
+      const response = await fetch("/api/matchmaking/status", {
+        method: "GET",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Home: Matchmaking status response:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.log("Home: Matchmaking status failed:", errorData);
+        return false;
+      }
+
+      const data = await response.json();
+      console.log("Home: Matchmaking status data:", data);
+
+      // Check if match was found based on the response structure from MatchmakingService
+      if (data.status === "game_found") {
+        console.log("Home: Match found!");
+        return true;
+      }
+
+      console.log("Home: No match found yet, continuing to wait...");
+      return false;
+    } catch (error) {
+      console.log("Home: Error checking matchmaking status:", error);
+      return false;
+    }
+  };
+
+  // Function to start polling for match status
+  const startMatchmakingPolling = () => {
+    console.log("Home: Starting matchmaking polling every 3 seconds");
+
+    pollingIntervalRef.current = setInterval(async () => {
+      const matchFound = await checkMatchmakingStatus();
+
+      if (matchFound) {
+        console.log(
+          "Home: Match found, stopping polling and navigating to game"
+        );
+
+        // Stop polling
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+
+        // Update UI state
+        setGameState("found");
+
+        // Navigate to game after short delay to show "Ready" state
+        setTimeout(() => {
+          navigateWithAnimationOutUp("/game");
+        }, 700);
+      }
+    }, 3000); // Poll every 3 seconds
+  };
+
+  // Function to stop polling
+  const stopMatchmakingPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+      console.log("Home: Stopped matchmaking polling");
+    }
+  };
+
+  // Function to remove player from matchmaking queue
+  const removeFromQueue = async () => {
+    try {
+      console.log("Home: Removing player from matchmaking queue");
+
+      const response = await fetch("/api/matchmaking/remove", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("Home: Remove from queue response:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.log("Home: Remove from queue failed:", errorData);
+        return false;
+      }
+
+      const data = await response.json();
+      console.log("Home: Successfully removed from queue:", data);
+      return true;
+    } catch (error) {
+      console.log("Home: Error removing from queue:", error);
+      return false;
+    }
+  };
+
   const navigateWithAnimationOutUp = (href: string) => {
     setAnimateCards(true);
     setTimeout(() => {
@@ -72,6 +188,18 @@ export default function Home() {
   const handleStartGame = async () => {
     if (!isAuthenticated) {
       navigateWithAnimationSideways("/login");
+      return;
+    }
+
+    // If currently searching, cancel the search
+    if (gameState === "searching") {
+      console.log("Home: Cancelling matchmaking search");
+      stopMatchmakingPolling();
+
+      // Remove player from matchmaking queue
+      await removeFromQueue();
+
+      setGameState("idle");
       return;
     }
 
@@ -100,14 +228,8 @@ export default function Home() {
       const data = await response.json();
       console.log("Home: Successfully joined queue:", data);
 
-      // Simulate finding a match after 3 seconds
-      // TODO: Replace with actual match status polling
-      setTimeout(() => {
-        setGameState("found");
-        setTimeout(() => {
-          navigateWithAnimationOutUp("/game");
-        }, 700);
-      }, 3000);
+      // Start polling for match status every 3 seconds
+      startMatchmakingPolling();
     } catch (error) {
       console.log("Home: Error during matchmaking:", error);
       setGameState("idle");
@@ -151,11 +273,14 @@ export default function Home() {
           </div>
           <button
             onClick={handleStartGame}
-            className="px-4 py-2 bg-slate-700 rounded-lg hover:bg-slate-500 text-white text-xl m-4"
-            disabled={gameState === "searching"}
+            className={`px-4 py-2 rounded-lg text-white text-xl m-4 transition-colors ${
+              gameState === "searching"
+                ? "bg-red-600 hover:bg-red-500"
+                : "bg-slate-700 hover:bg-slate-500"
+            }`}
           >
             {gameState === "searching"
-              ? "Searching..."
+              ? "Cancel Search"
               : gameState === "found"
               ? "Ready"
               : "Play Game"}
