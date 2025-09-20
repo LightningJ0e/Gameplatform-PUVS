@@ -10,7 +10,7 @@ import requests
 from fastapi.security import OAuth2PasswordBearer
 
 # In the container, this service's code is copied into /app, so utils is a local module
-from utils import send_create_game, get_user_info_from_userservice
+from utils import send_create_game, get_user_info_from_userservice, send_create_game_bot
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
 # Add sharedShit to path for imports
@@ -172,6 +172,7 @@ def remove_player_from_queue(token: str):
 def match_bot(token: str):
     user_info = get_user_info_from_userservice(token)
     user_id = user_info.get("id")
-    send_create_game(user_id)
+    game_id = send_create_game_bot(user_id)
+    return game_id
 
 
