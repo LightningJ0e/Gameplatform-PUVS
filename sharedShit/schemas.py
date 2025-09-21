@@ -6,6 +6,17 @@ class UserCreate(BaseModel):
     username: str
     password: str
 
+class UserOutUpdate(BaseModel):
+    id: int
+    username: str
+    games_played: int
+    games_won: int
+    elo: int
+
+    class Config:
+        orm_mode = True
+
+
 class UserOut(BaseModel):
     id: int
     username: str
