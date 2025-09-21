@@ -1,11 +1,10 @@
 from fastapi import FastAPI, Depends
-from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, to_round_state, get_game_with_specific_player
+from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
-from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, RoundStateOut, BotGameCreate, BotGameStateOut
+from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, BotGameCreate, BotGameStateOut
 from Services.GameService.auth import oauth2_scheme
 from Services.GameService.crud import create_game, get_user_info_from_userservice, create_botgame, get_BOT_info_from_userservice, get_BOT_Move, post_playedgamesupdate_to_userservice, post_wongamesupdate_to_userservice, post_eloupdate_to_userservice
-from fastapi.security import HTTPAuthorizationCredentials
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="GameService")
