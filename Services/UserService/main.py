@@ -10,6 +10,7 @@ from typing import List
 from contextlib import asynccontextmanager
 import os
 from fastapi.responses import Response
+import base64
 
 # Tabellen erzeugen, falls noch nicht vorhanden
 Base.metadata.create_all(bind=engine)
@@ -165,7 +166,9 @@ def get_userInfo(token: str=Depends(oauth2_scheme), db: Session = Depends(get_db
         db_user = get_user_by_name(db, username)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
-        return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo, "picture": db_user.picture}
+        
+        encodedImage = base64.b64encode(db_user.picture).decode("utf-8")
+        return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo, "picture": encodedImage}
     
     except JWTError:
         raise HTTPException(
