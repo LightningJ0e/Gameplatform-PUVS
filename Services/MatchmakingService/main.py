@@ -69,8 +69,15 @@ def find_match(waiting_players: list[int]):
 def add_player_to_queue(token: str):
     # Check if player is already in queue
     current_queue = redis_client.lrange("matchmaking_queue", 0, -1)
-    if token in current_queue:
-        return {"message": "Player already in queue"}
+
+    uinfo = get_user_info_from_userservice(token)
+    uid = uinfo.get("id")
+
+    for t in current_queue:
+        t = t.decode("utf-8")  # Bytes → String
+        queued_user_id = redis_client.hget(f"user:{t}", "userid")
+        if queued_user_id and int(queued_user_id) == uid:
+            return {"message": "Player already in queue"}
     
     user_info = get_user_info_from_userservice(token)
     user_elo = user_info.get("elo")
