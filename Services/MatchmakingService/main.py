@@ -64,7 +64,6 @@ def find_match(waiting_players: list[int]):
                     return game_data
     return None
 
-
 @app.post("/queue/add")
 def add_player_to_queue(token: str):
     # Check if player is already in queue
