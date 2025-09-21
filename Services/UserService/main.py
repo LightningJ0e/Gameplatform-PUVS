@@ -206,7 +206,7 @@ def get_userList(db: Session = Depends(get_db)):
             "picture": encodedImage
         })
 
-    return userList
+    return results
 
 # ------------------------------
 # Get BotInfo
