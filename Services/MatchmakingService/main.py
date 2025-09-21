@@ -40,8 +40,9 @@ def find_match(waiting_players: list[int]):
                 # Gleicht den ELO unterschied zwischen zwei Spieler ab
                 elo_diff = abs(int(player1_elo) - int(player2_elo))
                 if elo_diff <= 100:
-                    game_id = send_create_game(player1_userid, player2_userid)
-                    print(game_id)
+                    game_info = send_create_game(player1_userid, player2_userid)
+                    print(game_info)
+                    print(game_info.get("id"))
                     # Create Redis entry for game found status
                     game_data = {
                         "status": "game_found",

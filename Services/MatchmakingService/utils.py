@@ -17,22 +17,17 @@ def send_create_game(player_id1: int, player_id2: int, mode: str = "bo3"):
     }
 
     try:
-        r = requests.post(f"{GAMESERVICE_URL}/games", headers=headers, json=game_data)
-        logging.info(f"GameService /games response: status={r.status_code}, body={r.text}")
+        r = requests.post(f"{GAMESERVICE_URL}/games/", headers=headers, json=game_data)
+
+
         if not r.ok:
             logging.error(f"Request to GameService failed: {r.status_code} {r.text}")
-            return None
         else:
+            return r.json()
             logging.info(f"Game successfully created")
-            try:
-                return r.json()
-            except Exception as e:
-                logging.error(f"Failed to parse JSON from GameService: {e}, body={r.text}")
-                return None
 
     except Exception as e:
         logging.exception(f"Error contacting GameService: {e}")
-        return None
 
 def send_create_game_bot(player_id1: int, mode: str = "bo3"):
     headers = {
