@@ -74,7 +74,6 @@ def add_player_to_queue(token: str):
     uid = uinfo.get("id")
 
     for t in current_queue:
-        t = t.decode("utf-8")  # Bytes → String
         queued_user_id = redis_client.hget(f"user:{t}", "userid")
         if queued_user_id and int(queued_user_id) == uid:
             return {"message": "Player already in queue"}
