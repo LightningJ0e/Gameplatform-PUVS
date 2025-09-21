@@ -189,7 +189,7 @@ def match_bot(token: str):
     bot_id = bot_info.get("id")
     bot_elo = bot_info.get("elo")
 
-    game_data = send_create_game_bot(user_id)
+    game = send_create_game_bot(user_id)
 
     game_data = {
         "status": "game_found",
@@ -198,7 +198,7 @@ def match_bot(token: str):
         "player1_elo": player1_elo,
         "player2_elo": bot_elo,
         "timestamp": time.time(),
-        "game_id": game_data.get("id")
+        "game_id": game.get("id")
     }
         
     # Store the game found information with a unique key
@@ -208,8 +208,9 @@ def match_bot(token: str):
 
     remove_player_from_queue(token)
 
-    if not game_data or "game_id" not in game_data:
+    if not game or "game_id" not in game_data:
         raise HTTPException(status_code=500, detail="Game creation failed or invalid response from GameService")
-    return {"game_id": game_data["id"]}
+    
+    return {"game_id": game["id"]}
 
 
