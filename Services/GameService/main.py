@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends
-from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, to_round_state
+from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, to_round_state, get_game_with_specific_player
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
 from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, RoundStateOut, BotGameCreate, BotGameStateOut

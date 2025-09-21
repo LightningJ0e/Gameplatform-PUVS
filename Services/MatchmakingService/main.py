@@ -10,7 +10,7 @@ import requests
 from fastapi.security import OAuth2PasswordBearer
 
 # In the container, this service's code is copied into /app, so utils is a local module
-from utils import send_create_game, get_user_info_from_userservice, send_create_game_bot
+from utils import send_create_game, get_user_info_from_userservice, send_create_game_bot, get_BOT_info_from_userservice
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
 # Add sharedShit to path for imports
@@ -55,7 +55,7 @@ def find_match(waiting_players: list[int]):
                     # Store the game found information with a unique key
                     game_id = f"game_{int(time.time())}_{player1_userid}_{player1_elo}_{player2_userid}_{player2_elo}"
                     redis_client.hset(game_id, mapping=game_data)
-                    redis_client.expire(game_id, 3600)
+                    redis_client.expire(game_id, 60)  #60 Sekunden lang wird da game gespeichert.
                     
                     # Remove players from queue
                     remove_player_from_queue(player1_token)
@@ -183,7 +183,31 @@ def remove_player_from_queue(token: str):
 def match_bot(token: str):
     user_info = get_user_info_from_userservice(token)
     user_id = user_info.get("id")
+
+    player1_elo = redis_client.hget(f"user:{token}", "elo")
+    player1_userid = redis_client.hget(f"user:{token}", "userid")
+
+    bot_info = get_BOT_info_from_userservice()
+
     game_data = send_create_game_bot(user_id)
+
+    game_data = {
+        "status": "game_found",
+        "player1": token,
+        "player2": "BOT",
+        "player1_elo": player1_elo,
+        "player2_elo": bot_info.get("elo"),
+        "timestamp": time.time(),
+        "game_id": game_data.get("id")
+    }
+        
+    # Store the game found information with a unique key
+    game_id = f"game_{int(time.time())}_{player1_userid}_{player1_elo}_{bot_info.get("id")}_{bot_info.get("elo")}"
+    redis_client.hset(game_id, mapping=game_data)
+    redis_client.expire(game_id, 60)
+
+    remove_player_from_queue(token)
+
     if not game_data or "id" not in game_data:
         raise HTTPException(status_code=500, detail="Game creation failed or invalid response from GameService")
     return {"game_id": game_data["id"]}

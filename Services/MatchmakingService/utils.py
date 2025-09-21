@@ -75,3 +75,19 @@ def get_user_info_from_userservice(token: str):
     except Exception as e:
         logging.error(f"Error contacting UserService: {e}")
         return None
+    
+def get_BOT_info_from_userservice():
+    headers = {
+        "accept": "application/json"
+    }
+    try:
+        r = requests.get(f"{USERSERVICE_URL}/getBotInfo", headers=headers)
+        
+        if not r.ok:
+            logging.error(f"Request to UserService failed: {r.status_code} {r.text}")
+            return None
+        return r.json()
+
+    except Exception as e:
+        logging.error(f"Error contacting UserService: {e}")
+        return None
