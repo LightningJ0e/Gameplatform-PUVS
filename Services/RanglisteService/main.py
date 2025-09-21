@@ -31,7 +31,7 @@ def get_leaderboard_elo():
 # ------------------------------
 # Rang eines bestimmten Users
 # ------------------------------
-@app.get("/leaderboard/specificRank", response_model=UserOutRangListe )
+@app.get("/leaderboard/specificRank", response_model=UserOutRangListe)
 def get_user_rank(token: str):
 
     userList = getAllUsersFromUSerService()

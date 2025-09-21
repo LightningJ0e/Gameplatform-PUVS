@@ -35,6 +35,7 @@ class UserOutRangListe(BaseModel):
     elo: int
     winrate: float
     rank: int
+    picture: str
 
 class Action(IntEnum):
     Rock = 0
