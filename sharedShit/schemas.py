@@ -12,6 +12,7 @@ class UserOut(BaseModel):
     games_played: int
     games_won: int
     elo: int
+    picture: str
 
     class Config:
         orm_mode = True

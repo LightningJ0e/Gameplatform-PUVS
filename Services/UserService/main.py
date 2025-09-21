@@ -165,7 +165,7 @@ def get_userInfo(token: str=Depends(oauth2_scheme), db: Session = Depends(get_db
         db_user = get_user_by_name(db, username)
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
-        return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo}
+        return {"id": db_user.id, "username": db_user.username, "games_played": db_user.games_played, "games_won": db_user.games_won, "elo": db_user.elo, "picture": db_user.picture}
     
     except JWTError:
         raise HTTPException(
@@ -220,6 +220,9 @@ async def upload_image(token: str=Depends(oauth2_scheme), file: UploadFile = Fil
     return {"message": "Image uploaded"}
 
 
+# ------------------------------
+# Get Userpicture
+# ------------------------------
 @app.get("/users/{user_id}/image")
 def get_user_image(user_id: int, db: Session = Depends(get_db)):
     db_user = get_user_by_id(db, user_id)
