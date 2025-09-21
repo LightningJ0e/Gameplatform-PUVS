@@ -23,6 +23,7 @@ def send_create_game(player_id1: int, player_id2: int, mode: str = "bo3"):
         if not r.ok:
             logging.error(f"Request to GameService failed: {r.status_code} {r.text}")
         else:
+            return r.json()
             logging.info(f"Game successfully created")
 
     except Exception as e:
