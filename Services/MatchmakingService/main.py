@@ -188,6 +188,8 @@ def match_bot(token: str):
     player1_userid = redis_client.hget(f"user:{token}", "userid")
 
     bot_info = get_BOT_info_from_userservice()
+    bot_id = bot_info.get("id")
+    bot_elo = bot_info.get("elo")
 
     game_data = send_create_game_bot(user_id)
 
@@ -196,13 +198,13 @@ def match_bot(token: str):
         "player1": token,
         "player2": "BOT",
         "player1_elo": player1_elo,
-        "player2_elo": bot_info.get("elo"),
+        "player2_elo": bot_elo,
         "timestamp": time.time(),
         "game_id": game_data.get("id")
     }
         
     # Store the game found information with a unique key
-    game_id = f"game_{int(time.time())}_{player1_userid}_{player1_elo}_{bot_info.get("id")}_{bot_info.get("elo")}"
+    game_id = f"game_{int(time.time())}_{player1_userid}_{player1_elo}_{bot_id}_{bot_elo}"
     redis_client.hset(game_id, mapping=game_data)
     redis_client.expire(game_id, 60)
 
