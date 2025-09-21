@@ -40,7 +40,7 @@ def find_match(waiting_players: list[int]):
                 # Gleicht den ELO unterschied zwischen zwei Spieler ab
                 elo_diff = abs(int(player1_elo) - int(player2_elo))
                 if elo_diff <= 100:
-                    send_create_game(player1_userid, player2_userid)
+                    game_info = send_create_game(player1_userid, player2_userid)
                     
                     # Create Redis entry for game found status
                     game_data = {
@@ -49,7 +49,8 @@ def find_match(waiting_players: list[int]):
                         "player2": player2_token,
                         "player1_elo": player1_elo,
                         "player2_elo": player2_elo,
-                        "timestamp": time.time()
+                        "timestamp": time.time(),
+                        "game_id" : game_info["id"]
                     }
                     
                     # Store the game found information with a unique key
@@ -112,13 +113,15 @@ def get_player_queue_info(player_token: str):
             opponent_token = complete_data.get('player2')
             opponent_elo = complete_data.get('player2_elo')
             timestamp = complete_data.get('timestamp')
+            game_id = complete_data.get("game_id")
             return {
                 "status": status,
                 "player_token": player_token,
                 "player_elo": player_elo,
                 "opponent_token": opponent_token,
                 "opponent_elo": opponent_elo,
-                "game_timestamp": timestamp
+                "game_timestamp": timestamp,
+                "game_id" : game_id
             }
 
         elif player_2 == player_token:
@@ -130,13 +133,15 @@ def get_player_queue_info(player_token: str):
             player_token = complete_data.get('player2')
             player_elo = complete_data.get('player2_elo')
             timestamp = complete_data.get('timestamp')
+            game_id = complete_data.get("game_id")
             return {
                 "status": status,
                 "player_token": player_token,
                 "player_elo": player_elo,
                 "opponent_token": opponent_token,
                 "opponent_elo": opponent_elo,
-                "game_timestamp": timestamp
+                "game_timestamp": timestamp,
+                "game_id": game_id
             }
     
     # No game found, check if player is in queue
