@@ -4,7 +4,7 @@ from jose import JWTError, jwt, ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sharedShit.database import get_db, Base, engine, SessionLocal
 from Services.UserService.crud import create_user, get_user_by_id, get_all_Users, get_user_by_name
-from sharedShit.schemas import UserCreate, UserOut
+from sharedShit.schemas import UserCreate, UserOut, UserOutUpdate
 from Services.UserService.auth import verify_password, create_access_token, SECRET_KEY, ALGORITHM
 from typing import List
 from contextlib import asynccontextmanager
@@ -43,8 +43,10 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
     new_user = create_user(db, user.username, user.password)
+    encodedImage = base64.b64encode(new_user.picture).decode("utf-8")
     #Response for Api / HTTP-Response
-    return new_user
+    return {"id": new_user.id, "username": new_user.username, "games_played": new_user.games_played, "games_won": new_user.games_won, "elo": new_user.elo, "picture": encodedImage}
+    
 
 # ------------------------------
 # Login
@@ -62,7 +64,7 @@ def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = 
 # ------------------------------
 # PlayedGames-Update 
 # ------------------------------
-@app.post("/updateGamesPlayed", response_model=UserOut)
+@app.post("/updateGamesPlayed", response_model=UserOutUpdate)
 def update_GamesPlayed(playedGames: int, id: int, db: Session = Depends(get_db)):
     try:
         db_user = get_user_by_id(db, id)
@@ -94,7 +96,7 @@ def update_GamesPlayed(playedGames: int, id: int, db: Session = Depends(get_db))
 # ------------------------------
 # WonGames-Update 
 # ------------------------------
-@app.post("/updateGamesWon", response_model=UserOut)
+@app.post("/updateGamesWon", response_model=UserOutUpdate)
 def update_GamesWon(wonGames: int, id: int, db: Session = Depends(get_db)):
     try:
         db_user = get_user_by_id(db, id)
@@ -126,7 +128,7 @@ def update_GamesWon(wonGames: int, id: int, db: Session = Depends(get_db)):
 # ------------------------------
 # Elo-Update 
 # ------------------------------
-@app.post("/updateElo", response_model=UserOut)
+@app.post("/updateElo", response_model=UserOutUpdate)
 def update_elo(elo: int, id: int, db: Session = Depends(get_db)):
     try:
         db_user = get_user_by_id(db, id)
@@ -189,6 +191,21 @@ def get_userInfo(token: str=Depends(oauth2_scheme), db: Session = Depends(get_db
 @app.get("/getUserList", response_model=List[UserOut])
 def get_userList(db: Session = Depends(get_db)):
     userList = get_all_Users(db)
+    results = []
+
+    for u in userList:
+        encodedImage = None
+        encodedImage = base64.b64encode(u.picture).decode("utf-8")
+
+        results.append({
+            "id": u.id,
+            "username":u.username,
+            "games_played": u.games_played,
+            "games_won": u.games_won,
+            "elo": u.elo,
+            "picture": encodedImage
+        })
+
     return userList
 
 # ------------------------------
@@ -197,7 +214,9 @@ def get_userList(db: Session = Depends(get_db)):
 @app.get("/getBotInfo", response_model=UserOut)
 def get_userList(db: Session = Depends(get_db)):
     user = get_user_by_name(db, os.environ['BOTUSERNAME'])
-    return user
+    encodedImage = base64.b64encode(user.picture).decode("utf-8")
+    return {"id": user.id, "username": user.username, "games_played": user.games_played, "games_won": user.games_won, "elo": user.elo, "picture": encodedImage}
+    
 
 # ------------------------------
 # Set Userpicture
@@ -221,7 +240,6 @@ async def upload_image(token: str=Depends(oauth2_scheme), file: UploadFile = Fil
     db.commit()
     db.refresh(db_user)
     return {"message": "Image uploaded"}
-
 
 # ------------------------------
 # Get Userpicture
