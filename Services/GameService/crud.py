@@ -11,13 +11,24 @@ USERSERVICE_URL = "http://userservice:8000"
 BOTSERVICE_URL = "http://botservice:8004"
 
 def create_game(db: Session, player_id1: int, player_id2: int, mode: str):
+    
+    lives = 0
+
+    if mode == "bo3":
+        lives = 2
+    elif mode == "bo1":
+        lives = 1
+    elif mode == "bo5":
+        lives = 3
+    
+
     new_game = Game(
         player_1_id=player_id1,
         player_2_id=player_id2,
         mode=mode,
         status="in_progress",
-        score_p1=0,
-        score_p2=0
+        lives_p1=lives,
+        lives_p2=lives
     )
     db.add(new_game)
     db.commit()
