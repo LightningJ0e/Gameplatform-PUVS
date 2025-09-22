@@ -5,10 +5,12 @@ import { useState, useEffect } from "react";
 import Card from "@/components/Card";
 import PlayerProfile from "@/components/PlayerProfile";
 import { useAuth } from "@/context/AuthContext";
+import { useGame } from "@/context/GameContext";
 
 export default function Game() {
   const router = useRouter();
   const { user } = useAuth();
+  const { gameId, clearGameId, setGameId, resetGame } = useGame();
   const [playerCardsRevealed, setPlayerCardsRevealed] = useState([
     false,
     false,
@@ -33,6 +35,31 @@ export default function Game() {
   const [opponentHearts, setOpponentHearts] = useState(2);
   const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  // Check if game ID exists, redirect to home if not
+  useEffect(() => {
+    // Try restoring from sessionStorage before redirecting
+    if (!gameId) {
+      try {
+        const stored =
+          typeof window !== "undefined"
+            ? sessionStorage.getItem("gameId")
+            : null;
+        if (stored) {
+          console.log("Game: Restored game ID from sessionStorage:", stored);
+          // hydrate context so rest of app sees the ID
+          setGameId(stored);
+          return;
+        }
+      } catch {}
+      console.log(gameId);
+      console.log("Game: No game ID found, redirecting to home");
+      router.push("/");
+      return;
+    }
+
+    console.log("Game: Starting game with ID:", gameId);
+  }, [gameId, router, clearGameId, setGameId]);
 
   // Spieler- und Gegnerkarten (vorläufig alle als "rock" für das Layout)
   const playerCards = ["rock", "paper", "scissors"] as const;
@@ -192,12 +219,23 @@ export default function Game() {
     }, 500);
   };
 
+  // Navigation zurück zur Home mit Game-Reset
+  const navigateBackToHome = () => {
+    console.log("Game: Navigating back to home and resetting game state");
+
+    // Reset des gesamten Game-Zustands
+    resetGame();
+
+    // Navigation mit Animation
+    navigateWithAnimation("/");
+  };
+
   // Spiel-Ende-Überwachung
   useEffect(() => {
     if (playerHearts === 0 || opponentHearts === 0) {
-      // Nach 2 Sekunden zur Startseite
+      // Nach 2 Sekunden zur Startseite mit Game-Reset
       setTimeout(() => {
-        navigateWithAnimation("/");
+        navigateBackToHome();
       }, 2000);
     }
   }, [playerHearts, opponentHearts]);
@@ -448,7 +486,7 @@ export default function Game() {
 
           {/* Zurück-Button */}
           <button
-            onClick={() => navigateWithAnimation("/")}
+            onClick={navigateBackToHome}
             className="w-12 h-12 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
             title="Zurück zur Hauptseite"
           >
