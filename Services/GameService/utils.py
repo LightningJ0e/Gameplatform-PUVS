@@ -131,4 +131,5 @@ def apply_ready(db: Session, game: Game, round_obj: Round, player_id: int):
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Player 2 already ready")
         round_obj.readyStatus_p2 = "ready"
     db.add(round_obj)
+    db.commit()
 
