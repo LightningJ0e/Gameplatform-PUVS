@@ -92,6 +92,8 @@ def to_round_state(r: Round):
         p2_action=None if r.p2_action is None else Action(r.p2_action),
         winner=r.winner,
         status=r.status,
+        readyStatus_p1=r.readyStatus_p1,
+        readyStatus_p2=r.readyStatus_p2
     )
 
 def to_game_state(db: Session, game: Game):
