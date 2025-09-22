@@ -88,7 +88,7 @@ def get_game_state(game_id: int, db: Session = Depends(get_db)):
     game = get_game(db, game_id)
     return to_game_state(db, game)
 
-@app.post("games/{game_id}/ready")
+@app.post("/games/{game_id}/ready")
 def set_round_ready_state_for_player(game_id: int, db: Session = Depends(get_db),  token: str=Depends(oauth2_scheme)):
     game = get_game(db, game_id)
     r = get_or_create_current_round(db, game)
