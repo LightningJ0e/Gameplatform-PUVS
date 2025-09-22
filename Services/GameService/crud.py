@@ -39,13 +39,22 @@ def create_botgame(db: Session, player_id1: int, mode: str):
     bot_info = get_BOT_info_from_userservice()
     bot_id = bot_info["id"]
 
+    lives = 0
+
+    if mode == "bo3":
+        lives = 2
+    elif mode == "bo1":
+        lives = 1
+    elif mode == "bo5":
+        lives = 3
+
     new_game = Game(
         player_1_id=player_id1,
         player_2_id=bot_id,
         mode=mode,
         status="in_progress",
-        score_p1=0,
-        score_p2=0
+        lives_p1=lives,
+        lives_p2=lives
     )
     db.add(new_game)
     db.commit()

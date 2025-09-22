@@ -72,14 +72,3 @@ class GameStateOut(BaseModel):
     status: str                              # "in_progress"|"finished"
     winner_player_id: Optional[int] = None
     current_round: Optional[RoundStateOut] = None
-
-class BotGameStateOut(BaseModel):
-    id: int
-    player_1_id: int
-    player_2_id: int
-    mode: str                                # "bo1"|"bo3"|"bo5"
-    score_p1: int
-    score_p2: int
-    status: str                              # "in_progress"|"finished"
-    winner_player_id: Optional[int] = None
-    current_round: Optional[RoundStateOut] = None

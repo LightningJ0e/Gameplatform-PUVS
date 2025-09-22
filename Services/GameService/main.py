@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, apply_ready
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
-from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, BotGameCreate, BotGameStateOut
+from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, BotGameCreate
 from Services.GameService.auth import oauth2_scheme
 from Services.GameService.crud import create_game, get_user_info_from_userservice, create_botgame, get_BOT_info_from_userservice, get_BOT_Move, post_playedgamesupdate_to_userservice, post_wongamesupdate_to_userservice, post_eloupdate_to_userservice
 
@@ -15,7 +15,7 @@ def create_Game(body: GameCreate, db: Session = Depends(get_db)):
     get_or_create_current_round(db, game)
     return to_game_state(db, game)
 
-@app.post("/gamesbot", response_model=BotGameStateOut)
+@app.post("/gamesbot", response_model=GameStateOut)
 def create_GamewithBot(body: BotGameCreate, db: Session = Depends(get_db)):
     game = create_botgame(db, body.player_id1, body.mode)
     get_or_create_current_round(db, game)
