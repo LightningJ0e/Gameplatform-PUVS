@@ -97,12 +97,17 @@ def to_round_state(r: Round):
     )
 
 def to_game_state(db: Session, game: Game):
-    current = (
-        db.query(Round)
-        .filter(Round.game_id == game.id)
-        .order_by(Round.round_no.desc())
-        .first()
+
+    rounds = (
+    db.query(Round)
+    .filter(Round.game_id == game.id)
+    .order_by(Round.round_no.desc())
+    .limit(2)
+    .all()
     )
+    current = rounds[0] if len(rounds) > 0 else None
+    previous = rounds[1] if len(rounds) > 1 else None
+
     return GameStateOut(
         id=game.id,
         player_1_id=game.player_1_id,
@@ -113,6 +118,7 @@ def to_game_state(db: Session, game: Game):
         status=game.status,
         winner_player_id=game.winner_player_id,
         current_round=to_round_state(current) if current else None,
+        previous_round = to_round_state(previous) if previous else None
     )
 
 def apply_ready(db: Session, game: Game, round_obj: Round, player_id: int):
