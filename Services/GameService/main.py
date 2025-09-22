@@ -99,9 +99,9 @@ def set_round_ready_state_for_player(game_id: int, db: Session = Depends(get_db)
     db.commit()
     db.refresh(game)
 
-    return {"message": "Set Player {token} ready"}
+    return {"message": "Player successfully set ready"}
 
-@app.get("games/{game_id}/isready")
+@app.get("/games/{game_id}/isready")
 def get_round_ready_state(game_id: int, db: Session = Depends(get_db)):
     game = get_game(db, game_id)
     r = get_or_create_current_round(db, game)

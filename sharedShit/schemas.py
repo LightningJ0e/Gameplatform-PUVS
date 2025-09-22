@@ -61,6 +61,8 @@ class RoundStateOut(BaseModel):
     p2_action: Optional[Action] = None
     winner: Optional[str] = None            # "p1"|"p2"|"tie"
     status: str                             # "waiting"|"complete"
+    readyStatus_p1 : str # "noReady"|"Ready"
+    readyStatus_p2 : str # "noReady"|"Ready"
 
 class GameStateOut(BaseModel):
     id: int
