@@ -75,7 +75,7 @@ def create_next_round(db: Session, game: Game, round_no: int):
     
     db.add(r)
     db.commit()  # damit r.id belegt ist --> war vorher .flush()
-    db.refresh(round, game)
+    db.refresh(game)
 
     botInfo = get_BOT_info_from_userservice()
     botId = botInfo["id"]
