@@ -521,7 +521,7 @@ spec:
       nodePort: 30083 # Node-Port (muss im Bereich 30000-32767 liegen)
 ---
 # ------------------------------
-# Bot-Deplyoment
+# Bot-Deployment
 # ------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -618,20 +618,17 @@ spec:
       targetPort: 3001 # Container-Port
       nodePort: 30085 # Node-Port (muss im Bereich 30000-32767 liegen)
 
-
-
-
-
-
-#### Ab hier mit KI-Unterstützung:
-
+# ------------------------------
+# Alles folgende ist Monitoring
+# ------------------------------
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: monitoring
 
-# Prometheus RBAC
+# Prometheus RBAC (Role Based Access Control)
+# Serviceaccount
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -639,6 +636,7 @@ metadata:
   name: prometheus
   namespace: monitoring
 ---
+# Rolle für das abgreifen von Metriken
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -653,6 +651,7 @@ rules:
   - nonResourceURLs: ["/metrics"]
     verbs: ["get"]
 ---
+# Binden der Rolle an Identität --> Prometheus Service account
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -667,6 +666,7 @@ subjects:
     namespace: monitoring
 
 # kube-state-metrics (objects/replicas)
+# Serviceaccount
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -674,6 +674,7 @@ metadata:
   name: kube-state-metrics
   namespace: monitoring
 ---
+# Rolle für das abgreifen von Metriken --> Kube-State-Metrics
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -701,6 +702,7 @@ rules:
     resources: ["storageclasses","volumeattachments"]
     verbs: ["list","watch"]
 ---
+# Binden der Rolle an Identität --> kube-state-metrics Service account
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -714,6 +716,7 @@ subjects:
     name: kube-state-metrics
     namespace: monitoring
 ---
+# Deployment für Kube-State-Metrics
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -736,6 +739,7 @@ spec:
             requests: { cpu: "50m", memory: "64Mi" }
             limits:   { cpu: "200m", memory: "256Mi" }
 ---
+# Service für Kube-State-Metrics
 apiVersion: v1
 kind: Service
 metadata:
@@ -748,8 +752,8 @@ spec:
       port: 8080
       targetPort: 8080
 
-# node-exporter (node CPU/mem/disk)
 ---
+# Deployment node-exporter (node CPU/mem/disk)
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -788,6 +792,7 @@ spec:
         - name: rootfs
           hostPath: { path: / }
 ---
+# Service node-exporter (node CPU/mem/disk)
 apiVersion: v1
 kind: Service
 metadata:
@@ -801,8 +806,9 @@ spec:
       port: 9100
       targetPort: 9100
 
-# Prometheus (scrapes node-exporter, kube-state-metrics, kubelet/cAdvisor)
 ---
+# Prometheus (scrapes node-exporter, kube-state-metrics, kubelet/cAdvisor)
+# Config der Intervalle und Metrik-Apis / Services
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -839,6 +845,7 @@ data:
         tls_config: { insecure_skip_verify: true }
         kubernetes_sd_configs: [{ role: node }]
 ---
+# Prometheus-Deployment --> Scraper
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -873,6 +880,7 @@ spec:
         - name: prom-data
           emptyDir: {}
 ---
+# Prometheus-Deployment --> Scraper
 apiVersion: v1
 kind: Service
 metadata:
@@ -887,8 +895,9 @@ spec:
       targetPort: 9090
       nodePort: 31672
 
-# Grafana (provision Prometheus + 2 dashboards)
 ---
+# Grafana (provision Prometheus + 2 dashboards)
+#ConfigMap Grafana Datasources
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -904,6 +913,7 @@ data:
         access: proxy
         isDefault: true
 ---
+# ConfigMap Dashboard-Provider
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -922,6 +932,7 @@ data:
         options:
           path: /var/lib/grafana/dashboards/default
 ---
+# Deployment Grafana
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -969,6 +980,7 @@ spec:
         - name: dashboards
           emptyDir: {}
 ---
+# Service Grafana
 apiVersion: v1
 kind: Service
 metadata:
