@@ -111,7 +111,7 @@ export default function PlayerProfile({
         </div>
 
         {/* Ranking-Raute */}
-        {rankingPosition && (
+        {rankingPosition && rankingPosition > 0 && (
           <div className="relative -mt-3">
             <div className="w-6 h-6 bg-gradient-to-br from-amber-400 via-amber-200 to-amber-600 transform rotate-45 flex items-center justify-center shadow-lg">
               <span className="text-black font-bold text-sm transform -rotate-45">
@@ -192,18 +192,6 @@ export default function PlayerProfile({
           </div>
         )}
       </div>
-
-      {/* Elo und Winrate */}
-      {elo && winrate && (
-        <div className="flex flex-col">
-          <span className="text-white font-semibold text-lg p-1">
-            Elo: {elo}
-          </span>
-          <span className="text-white font-semibold text-lg p-1">
-            Winrate: {winrate}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
