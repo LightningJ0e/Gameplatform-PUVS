@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
 from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, apply_ready
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
@@ -34,6 +34,12 @@ def submit_move(game_id: int,
     assert_game_open(game)
 
     r = get_or_create_current_round(db, game)
+
+    readystate = get_round_ready_state(game_id, db)
+
+    if readystate.get("message") != "ready":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Players not ready")
+
     apply_move(db, game, r, player_id, body.action)
 
     ### RICHARDS BOT SHIT

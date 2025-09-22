@@ -123,11 +123,11 @@ def apply_ready(db: Session, game: Game, round_obj: Round, player_id: int):
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Round already completed")
     # Doppelzüge verhindern
     if player_id == game.player_1_id:
-        if round_obj.readyStatus_p1 is not None:
+        if round_obj.readyStatus_p1 == "ready":
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Player 1 already ready")
         round_obj.readyStatus_p1 = "ready"
     else:
-        if round_obj.readyStatus_p2 is not None:
+        if round_obj.readyStatus_p2 == "ready":
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Player 2 already ready")
         round_obj.readyStatus_p2 = "ready"
     db.add(round_obj)
