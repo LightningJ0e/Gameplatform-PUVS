@@ -1,35 +1,9 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { getJwtTokenFromCookie } from "@/app/lib/auth";
 
 const MATCHMAKING_BASE =
   process.env.MATCHMAKING_BASE_URL ?? "http://localhost:8002";
-const COOKIE_NAME = process.env.AUTH_COOKIE_NAME ?? "auth";
-
-async function getJwtTokenFromCookie(): Promise<string | null> {
-  try {
-    const cookieStore = await cookies();
-    const authCookie = cookieStore.get(COOKIE_NAME);
-
-    if (!authCookie?.value) {
-      console.log("API /matchmaking/status: No auth cookie found");
-      return null;
-    }
-
-    const cookieValue = authCookie.value;
-
-    // Cookie format: "Bearer <token>" or "bearer <token>"
-    if (cookieValue.toLowerCase().startsWith("bearer ")) {
-      const token = cookieValue.slice(7); // Remove "Bearer " or "bearer " prefix
-      return token;
-    }
-
-    console.log("API /matchmaking/status: Cookie doesn't start with 'Bearer '");
-    return null;
-  } catch (error) {
-    console.log("API /matchmaking/status: Error reading cookie:", error);
-    return null;
-  }
-}
 
 export async function GET() {
   console.log("API /matchmaking/status: GET request started");

@@ -7,18 +7,19 @@ interface Props {
 }
 
 export default function Settings({ setShowSettings, onSave }: Props) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [userName, setUserName] = useState(user?.username);
-  const [profileImage, setProfileImage] = useState<string | null>(
-    localStorage.getItem("profileImage")
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(
+    user?.picture ? `data:image/png;base64,${user.picture}` : null
   );
-  const [previewImage, setPreviewImage] = useState<string | null>(profileImage);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Bild ist zu groß. Maximal 5MB erlaubt.");
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Bild ist zu groß. Maximal 2MB erlaubt.");
         return;
       }
 
@@ -27,6 +28,10 @@ export default function Settings({ setShowSettings, onSave }: Props) {
         return;
       }
 
+      // Store file for upload
+      setSelectedFile(file);
+
+      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
         const base64String = e.target?.result as string;
@@ -36,25 +41,68 @@ export default function Settings({ setShowSettings, onSave }: Props) {
     }
   };
 
-  const handleSave = () => {
-    if (previewImage) {
-      localStorage.setItem("profileImage", previewImage);
-      setProfileImage(previewImage);
-    }
-    if (userName) {
-      localStorage.setItem("username", userName);
-    }
+  const handleSave = async () => {
+    setIsUploading(true);
 
-    // Call the callback to refresh parent component
-    if (onSave) {
-      onSave();
-    }
+    try {
+      // Upload image if selected
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
 
-    setShowSettings(false);
+        const response = await fetch("/api/users/profile-image", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to upload image");
+        }
+
+        console.log("Image uploaded successfully");
+      }
+
+      // Update username if changed
+      if (userName && userName !== user?.username) {
+        const response = await fetch("/api/users/me", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username: userName }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to update username");
+        }
+
+        console.log("Username updated successfully");
+      }
+
+      // Refresh user data to get updated info
+      await refreshUser();
+
+      // Call the callback to refresh parent component
+      if (onSave) {
+        onSave();
+      }
+
+      setShowSettings(false);
+    } catch (error: any) {
+      console.error("Save error:", error);
+      alert(error.message || "Fehler beim Speichern");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleCancel = () => {
-    setPreviewImage(profileImage); // Reset preview
+    setPreviewImage(
+      user?.picture ? `data:image/png;base64,${user.picture}` : null
+    ); // Reset preview
+    setSelectedFile(null); // Reset selected file
     setUserName(user?.username); // Reset username
     setShowSettings(false);
   };
@@ -143,9 +191,14 @@ export default function Settings({ setShowSettings, onSave }: Props) {
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors"
+            disabled={isUploading}
+            className={`px-4 py-2 text-white rounded-lg transition-colors ${
+              isUploading
+                ? "bg-gray-600 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-500"
+            }`}
           >
-            Save
+            {isUploading ? "Uploading..." : "Save"}
           </button>
         </div>
       </div>

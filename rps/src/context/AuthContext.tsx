@@ -15,6 +15,7 @@ export interface User {
   games_won: number;
   elo: number;
   rank: number;
+  picture?: string; // base64-encoded image
   // abgeleitet – praktisch fürs UI:
   winrate?: number; // 0..100
 }
@@ -76,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         games_won: Number(d.games_won ?? 0),
         elo: Number(d.elo ?? 0),
         rank: Number(d.rank ?? 0),
+        picture: d.picture || undefined, // base64-encoded image from backend
       };
       // Winrate ableiten
       const gp = u.games_played;
