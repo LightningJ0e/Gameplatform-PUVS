@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import Card from "@/components/Card";
-import PlayerProfile from "@/components/PlayerProfile";
+import Card from "@/components/ui/Card";
+import PlayerProfile from "@/components/ui/PlayerProfile";
 import { useAuth } from "@/context/AuthContext";
 import { useGame } from "@/context/GameContext";
+import { useOpponent } from "@/context/OpponentContext";
 
 export default function Game() {
   const router = useRouter();
@@ -34,7 +35,8 @@ export default function Game() {
   const [playerHearts, setPlayerHearts] = useState(2);
   const [opponentHearts, setOpponentHearts] = useState(2);
   const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+
+  const { opponent } = useOpponent();
 
   // Check if game ID exists, redirect to home if not
   useEffect(() => {
@@ -64,12 +66,6 @@ export default function Game() {
   // Spieler- und Gegnerkarten (vorläufig alle als "rock" für das Layout)
   const playerCards = ["rock", "paper", "scissors"] as const;
   const opponentCards = ["rock", "paper", "scissors"] as const;
-
-  // Mock opponent data
-  const opponent = {
-    username: "Computer",
-    hearts: 2,
-  };
 
   // Funktion zum Auswählen einer Karte
   const handleCardSelect = (index: number, cardType: string) => {
@@ -240,15 +236,8 @@ export default function Game() {
     }
   }, [playerHearts, opponentHearts]);
 
-  // Load saved profile data from localStorage and setup card reveal
+  // Setup card reveal animation
   useEffect(() => {
-    // Load saved profile image from localStorage
-    const savedImage = localStorage.getItem("profileImage");
-
-    if (savedImage) {
-      setProfileImage(savedImage);
-    }
-
     // Aufdecken der Spielerkarten
     const timer1 = setTimeout(() => {
       setPlayerCardsRevealed((prev) => [true, prev[1], prev[2]]);
@@ -294,34 +283,44 @@ export default function Game() {
       >
         {/* Opponent Profile - Top Left */}
         <PlayerProfile
-          username={opponent.username}
+          username={opponent?.username || "Unknown Opponent"}
+          profileImage={
+            opponent?.picture
+              ? `data:image/png;base64,${opponent.picture}`
+              : undefined
+          }
           hearts={opponentHearts}
           maxHearts={2}
           position="top-left"
+          rankingPosition={opponent?.rank}
+          elo={opponent?.elo}
+          winrate={opponent?.winrate}
           playerId="opponent"
           onHeartBreak={(heartIndex) => {
             console.log(`Opponent heart ${heartIndex} broke!`);
-            // Hier können Sie zusätzliche Effekte hinzufügen
           }}
         />
-
         {/* Player Profile - Bottom Left */}
         {user && (
           <PlayerProfile
-            username={user.username}
-            profileImage={profileImage || undefined}
+            username={user?.username || "Player"}
+            profileImage={
+              user?.picture
+                ? `data:image/png;base64,${user.picture}`
+                : undefined
+            }
             hearts={playerHearts}
             maxHearts={2}
             position="bottom-left"
-            rankingPosition={1}
+            rankingPosition={user?.rank}
+            elo={user?.elo}
+            winrate={user?.winrate}
             playerId="player"
             onHeartBreak={(heartIndex) => {
               console.log(`Player heart ${heartIndex} broke!`);
-              // Hier können Sie zusätzliche Effekte hinzufügen
             }}
           />
         )}
-
         {/* Gegnerkarten (oben) - mit Rückseite */}
         <div className="flex items-center justify-center py-8">
           <div className="flex gap-6">
@@ -343,7 +342,6 @@ export default function Game() {
             ))}
           </div>
         </div>
-
         {/* Round Counter */}
         <div className="absolute top-16 right-1/7 p-2 ">
           <div className="text-center">
@@ -353,7 +351,6 @@ export default function Game() {
             </span>
           </div>
         </div>
-
         {/* Mittlere Spielbereich */}
         <div className="flex flex-col items-center justify-center gap-4 py-6 relative">
           {/* Gegner-Platzhalter (oben) */}
@@ -384,7 +381,6 @@ export default function Game() {
             )}
           </div>
         </div>
-
         {/* Spielerkarten (unten) */}
         <div className="flex items-center justify-center py-8">
           <div className="flex gap-8">
@@ -412,7 +408,6 @@ export default function Game() {
             ))}
           </div>
         </div>
-
         {/* Game Phase Display - Zentriert */}
         {gamePhase === "ready" && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
@@ -423,7 +418,6 @@ export default function Game() {
             </div>
           </div>
         )}
-
         {gamePhase === "round" && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
             <div className="text-center">
@@ -433,7 +427,6 @@ export default function Game() {
             </div>
           </div>
         )}
-
         {opponentHearts === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
             <div className="text-center">
@@ -443,7 +436,6 @@ export default function Game() {
             </div>
           </div>
         )}
-
         {playerHearts === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
             <div className="text-center">
@@ -453,7 +445,6 @@ export default function Game() {
             </div>
           </div>
         )}
-
         {/* Countdown Display - Rechte Seite */}
         {countdown !== null && (
           <div className="absolute top-1/2 right-8 transform -translate-y-1/2 bg-slate-800/90 backdrop-blur-sm rounded-lg p-6 z-10">
@@ -463,7 +454,6 @@ export default function Game() {
             </div>
           </div>
         )}
-
         {/* Test Buttons - Unten rechts */}
         <div className="absolute bottom-6 right-6 flex flex-col gap-3 z-10">
           {/* Runde Starten Button */}

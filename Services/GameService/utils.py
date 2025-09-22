@@ -2,6 +2,7 @@ from sharedShit.schemas import GameStateOut, RoundStateOut, Action
 from fastapi import HTTPException, status
 from sharedShit.models import Game, Round, User
 from sqlalchemy.orm import Session
+from Services.GameService.crud import get_BOT_info_from_userservice
 
 victories = {
         Action.Rock: [Action.Scissors],  # Rock beats scissors
@@ -71,8 +72,17 @@ def apply_move(db: Session, game: Game, round_obj: Round, player_id: int, action
 
 def create_next_round(db: Session, game: Game, round_no: int):
     r = Round(game_id=game.id, round_no=round_no, status="waiting")
+    
     db.add(r)
-    db.flush()  # damit r.id belegt ist
+    db.commit()  # damit r.id belegt ist --> war vorher .flush()
+    db.refresh(game)
+
+    botInfo = get_BOT_info_from_userservice()
+    botId = botInfo["id"]
+
+    if game.player_1_id == botId or game.player_2_id == botId:
+        round = get_or_create_current_round(db, game)
+        apply_ready(db, game, round, botId)
     return r
 
 def to_round_state(r: Round):
@@ -82,6 +92,8 @@ def to_round_state(r: Round):
         p2_action=None if r.p2_action is None else Action(r.p2_action),
         winner=r.winner,
         status=r.status,
+        readyStatus_p1=r.readyStatus_p1,
+        readyStatus_p2=r.readyStatus_p2
     )
 
 def to_game_state(db: Session, game: Game):
@@ -96,9 +108,27 @@ def to_game_state(db: Session, game: Game):
         player_1_id=game.player_1_id,
         player_2_id=game.player_2_id,
         mode=game.mode,
-        score_p1=game.score_p1,
-        score_p2=game.score_p2,
+        lives_p1=game.lives_p1,
+        lives_p2=game.lives_p2,
         status=game.status,
         winner_player_id=game.winner_player_id,
         current_round=to_round_state(current) if current else None,
     )
+
+def apply_ready(db: Session, game: Game, round_obj: Round, player_id: int):
+    # Sicherstellen, dass der Player zum Game gehört
+    if player_id not in (game.player_1_id, game.player_2_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Player not in this game")
+    if round_obj.status != "waiting":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Round already completed")
+    # Doppelzüge verhindern
+    if player_id == game.player_1_id:
+        if round_obj.readyStatus_p1 == "ready":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Player 1 already ready")
+        round_obj.readyStatus_p1 = "ready"
+    else:
+        if round_obj.readyStatus_p2 == "ready":
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Player 2 already ready")
+        round_obj.readyStatus_p2 = "ready"
+    db.add(round_obj)
+

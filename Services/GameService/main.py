@@ -1,8 +1,8 @@
-from fastapi import FastAPI, Depends
-from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state
+from fastapi import FastAPI, Depends, HTTPException, status
+from Services.GameService.utils import decide_round, wins_needed, get_game, assert_game_open, get_or_create_current_round, apply_move, create_next_round, to_game_state, apply_ready
 from sqlalchemy.orm import Session
 from sharedShit.database import get_db, Base, engine
-from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, BotGameCreate, BotGameStateOut
+from sharedShit.schemas import Action, GameStateOut, MoveIn, GameCreate, BotGameCreate
 from Services.GameService.auth import oauth2_scheme
 from Services.GameService.crud import create_game, get_user_info_from_userservice, create_botgame, get_BOT_info_from_userservice, get_BOT_Move, post_playedgamesupdate_to_userservice, post_wongamesupdate_to_userservice, post_eloupdate_to_userservice
 
@@ -12,12 +12,14 @@ app = FastAPI(title="GameService")
 @app.post("/games", response_model=GameStateOut)
 def create_Game(body: GameCreate, db: Session = Depends(get_db)):
     game = create_game(db, body.player_id1, body.player_id2, body.mode)
-    return game
+    get_or_create_current_round(db, game)
+    return to_game_state(db, game)
 
-@app.post("/gamesbot", response_model=BotGameStateOut)
+@app.post("/gamesbot", response_model=GameStateOut)
 def create_GamewithBot(body: BotGameCreate, db: Session = Depends(get_db)):
     game = create_botgame(db, body.player_id1, body.mode)
-    return game
+    get_or_create_current_round(db, game)
+    return to_game_state(db, game)
 
 @app.post("/games/{game_id}/move", response_model=GameStateOut)
 def submit_move(game_id: int,
@@ -32,6 +34,12 @@ def submit_move(game_id: int,
     assert_game_open(game)
 
     r = get_or_create_current_round(db, game)
+
+    readystate = get_round_ready_state(game_id, db)
+
+    if readystate.get("message") != "ready":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Players not ready")
+
     apply_move(db, game, r, player_id, body.action)
 
     ### RICHARDS BOT SHIT
@@ -53,12 +61,12 @@ def submit_move(game_id: int,
         r.status = "complete"
 
         if winner == "p1":
-            game.score_p1 += 1
+            game.lives_p2 -= 1
         elif winner == "p2":
-            game.score_p2 += 1
+            game.lives_p1 -= 1
 
-        needed = wins_needed(game.mode)
-        if game.score_p1 >= needed:
+        #needed = wins_needed(game.mode)
+        if game.lives_p2 <= 0:
             game.status = "finished"
             game.winner_player_id = game.player_1_id
             post_playedgamesupdate_to_userservice(game.player_1_id, 1)
@@ -66,7 +74,7 @@ def submit_move(game_id: int,
             post_wongamesupdate_to_userservice(game.player_1_id, 1)
             post_eloupdate_to_userservice(game.player_1_id, 30)
             post_eloupdate_to_userservice(game.player_2_id , -30)
-        elif game.score_p2 >= needed:
+        elif game.lives_p1 <= 0:
             game.status = "finished"
             game.winner_player_id = game.player_2_id
             post_playedgamesupdate_to_userservice(game.player_2_id, 1)
@@ -85,3 +93,28 @@ def submit_move(game_id: int,
 def get_game_state(game_id: int, db: Session = Depends(get_db)):
     game = get_game(db, game_id)
     return to_game_state(db, game)
+
+@app.post("/games/{game_id}/ready")
+def set_round_ready_state_for_player(game_id: int, db: Session = Depends(get_db),  token: str=Depends(oauth2_scheme)):
+    game = get_game(db, game_id)
+    r = get_or_create_current_round(db, game)
+    user_info = get_user_info_from_userservice(token.credentials)
+    player_id = user_info.get("id")
+    apply_ready(db, game, r, player_id)
+
+    db.commit()
+    db.refresh(game)
+
+    return {"message": "Player successfully set ready"}
+
+@app.get("/games/{game_id}/isready")
+def get_round_ready_state(game_id: int, db: Session = Depends(get_db)):
+    game = get_game(db, game_id)
+    r = get_or_create_current_round(db, game)
+
+    if r.readyStatus_p1 == "ready" and r.readyStatus_p2 == "ready":
+        return {"message": "ready"}
+    else:
+        return {"message": "notReady"}
+
+
