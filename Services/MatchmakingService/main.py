@@ -61,14 +61,10 @@ app = FastAPI(title="MatchmakingService")
 
 
 def find_match(_ignored_waiting_players: list[int] = None):
-    # immer frisch lesen (so "sieht" #2 auch #3)
     while True:
         waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
         if len(waiting_players) < 2:
             return None
-
-        # deine bestehende Logik – leicht ergänzt: sobald ein Paar gefunden wurde,
-        # mache sofort weiter (es können weitere Paare möglich sein)
         for j in range(len(waiting_players)):
             for k in range(j + 1, len(waiting_players)):
                 p1 = waiting_players[j]
@@ -103,16 +99,11 @@ def find_match(_ignored_waiting_players: list[int] = None):
                     remove_player_from_queue(p1)
                     remove_player_from_queue(p2)
 
-                    # direkt weiterschauen, ob noch ein Paar geht
                     break
             else:
-                # innere Schleife hat NICHT gebrochen -> kein Paar ab j
                 continue
-            # innere Schleife hat gebrochen -> wir haben ein Paar erstellt
-            # outer neu starten, um die frische Queue zu prüfen
             break
         else:
-            # gar kein Paar gefunden -> fertig
             return None
 
 
@@ -144,11 +135,10 @@ def add_player_to_queue(token: str):
     pipe.lpush("matchmaking_queue", token)
     pipe.execute()
 
-    # NEU: serialisiert matchen
     lock_token = acquire_lock()
     if lock_token:
         try:
-            find_match(None)  # ignoriert Param, liest selbst frisch
+            find_match(None) 
         finally:
             release_lock(lock_token)
 
@@ -204,7 +194,7 @@ def get_player_queue_info(player_token: str):
                 "game_id": game_id
             }
     
-    # No game found, check if player is in queue
+    # Ist SPieler in der Que
     queue_position = redis_client.lpos("matchmaking_queue", player_token)
     
     if queue_position is not None:
@@ -217,7 +207,6 @@ def get_player_queue_info(player_token: str):
             "queue_length": redis_client.llen("matchmaking_queue")
         }
     
-    # Player not in queue and no game found
     return {
         "status": "not_in_queue",
         "player_token": player_token,
@@ -227,9 +216,7 @@ def get_player_queue_info(player_token: str):
 
 @app.post("/queue/remove")
 def remove_player_from_queue(token: str):
-    # Remove player from matchmaking queue
     redis_client.lrem("matchmaking_queue", 0, token)
-    # Delete user's data from Redis
     redis_client.delete(f"user:{token}")
     return {"message": f"Player {token} removed from queue"}
 
@@ -257,7 +244,6 @@ def match_bot(token: str):
         "game_id": game.get("id")
     }
         
-    # Store the game found information with a unique key
     game_id = f"game_{int(time.time())}_{player1_userid}_{player1_elo}_{bot_id}_{bot_elo}"
     redis_client.hset(game_id, mapping=game_data)
     redis_client.expire(game_id, 60)
