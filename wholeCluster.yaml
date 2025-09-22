@@ -592,7 +592,7 @@ spec:
         - name: frontendservice
           image: ghcr.io/lightningj0e/gameplatform-puvs/frontendserviceimage:latest
           ports:
-            - containerPort: 3000
+            - containerPort: 3001
           resources:
             requests:
               cpu: "250m"
@@ -614,8 +614,8 @@ spec:
     app: frontendservice
   ports:
     - protocol: TCP
-      port: 3000 # Cluster-Port
-      targetPort: 3000 # Container-Port
+      port: 3001 # Cluster-Port
+      targetPort: 3001 # Container-Port
       nodePort: 30085 # Node-Port (muss im Bereich 30000-32767 liegen)
 
 
@@ -979,6 +979,7 @@ spec:
   type: NodePort
   ports:
     - name: http
-      port: 3001
-      targetPort: 3001
+      port: 3000
+      targetPort: 3000
       nodePort: 30090
+      
