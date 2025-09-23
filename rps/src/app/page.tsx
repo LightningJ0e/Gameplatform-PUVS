@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { useGame } from "@/context/GameContext";
-import { useOpponent } from "@/context/OpponentContext";
 import Header from "@/components/ui/Header";
 import Ranking from "@/components/home/Ranking";
 import PlayerProfile from "@/components/ui/PlayerProfile";
@@ -20,9 +18,8 @@ export default function Home() {
   const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
-  const { setGameId, gameId, setOpponent_token, opponent_token } = useGame();
-  const { setOpponent, opponent } = useOpponent();
-  const { handleStartGame, gameState, isSearching, isFound } = useMatchmaking();
+
+  const { handleStartGame, gameState, isFound } = useMatchmaking();
   const [showRanking, setShowRanking] = useState(false);
   const [animateCards, setAnimateCards] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -77,8 +74,6 @@ export default function Home() {
                 position="relative"
                 rankingPosition={user.rank}
                 hearts={0}
-                elo={user.elo}
-                winrate={user.winrate}
               />
               <SettingsButton setShowSettings={setShowSettings} />
             </div>

@@ -11,8 +11,6 @@ interface PlayerProfileProps {
   maxHearts?: number;
   onHeartBreak?: (heartIndex: number) => void;
   playerId?: string;
-  elo?: number;
-  winrate?: number;
 }
 
 export default function PlayerProfile({
@@ -24,8 +22,6 @@ export default function PlayerProfile({
   maxHearts = 2,
   onHeartBreak,
   playerId = "player",
-  elo,
-  winrate,
 }: PlayerProfileProps) {
   console.log("PlayerProfile received:", {
     username,

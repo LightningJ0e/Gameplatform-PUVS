@@ -1,4 +1,5 @@
 import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 import { useState } from "react";
 
 interface Props {
@@ -63,24 +64,6 @@ export default function Settings({ setShowSettings, onSave }: Props) {
         console.log("Image uploaded successfully");
       }
 
-      // Update username if changed
-      if (userName && userName !== user?.username) {
-        const response = await fetch("/api/users/me", {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ username: userName }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.detail || "Failed to update username");
-        }
-
-        console.log("Username updated successfully");
-      }
-
       // Refresh user data to get updated info
       await refreshUser();
 
@@ -132,20 +115,6 @@ export default function Settings({ setShowSettings, onSave }: Props) {
           </button>
         </div>
 
-        <div className="space-y-4 my-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Change Username
-            </label>
-            <input
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-        </div>
-
         <div className="space-y-4 my-6">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -156,7 +125,7 @@ export default function Settings({ setShowSettings, onSave }: Props) {
             <div className="flex items-center space-x-4 mb-3">
               <div className="w-20 h-20 rounded-full overflow-hidden bg-slate-600 flex items-center justify-center">
                 {previewImage ? (
-                  <img
+                  <Image
                     src={previewImage}
                     alt="Profile Preview"
                     className="w-full h-full object-cover"

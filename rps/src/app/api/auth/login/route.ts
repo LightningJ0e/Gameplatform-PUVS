@@ -6,6 +6,12 @@ const LoginReq = z.object({
   password: z.string().min(6),
 });
 
+interface LoginResponse {
+  access_token: string;
+  token_type?: string;
+  [key: string]: unknown; // erlaubt zusätzliche Felder
+}
+
 const USER_BASE = process.env.USER_BASE_URL ?? "http://localhost:8000";
 const COOKIE_NAME = process.env.AUTH_COOKIE_NAME ?? "auth";
 const ONE_HOUR = 60 * 60;
@@ -38,11 +44,11 @@ export async function POST(req: Request) {
     console.log("Login API: UserService response status:", upstream.status);
 
     // 4) Response verarbeiten
-    let payload: any = null;
+    let payload: LoginResponse | { detail: string } | null = null;
     try {
       payload = await upstream.json();
       console.log("Login API: UserService payload:", payload);
-    } catch (e) {
+    } catch {
       console.log("Login API: Failed to parse JSON, trying text");
       const text = await upstream.text();
       payload = text ? { detail: text } : { detail: "Unknown error" };
@@ -55,6 +61,14 @@ export async function POST(req: Request) {
     }
 
     // 5) JWT Token aus Response extrahieren
+    if (!payload || "detail" in payload) {
+      console.log("Login API: Invalid payload or error response");
+      return NextResponse.json(
+        { detail: "Invalid response from authentication service" },
+        { status: 500 }
+      );
+    }
+
     const { token_type = "Bearer", access_token } = payload;
     if (!access_token) {
       console.log("Login API: No access_token in response");

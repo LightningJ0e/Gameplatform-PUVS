@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 interface Player {
   id: number;
@@ -120,12 +121,13 @@ export default function Ranking({
                 {/* Profilbild */}
                 <div className="w-16 h-16 mx-6">
                   {player.picture ? (
-                    <img
+                    <Image
                       src={player.picture}
                       alt={`${player.username} avatar`}
-                      className="w-full h-full rounded-full object-cover border-2 border-slate-600"
+                      width={64}
+                      height={64}
+                      className="rounded-full object-cover border-2 border-slate-600"
                       onError={(e) => {
-                        // Fallback wenn Bild nicht gefunden wird
                         (
                           e.target as HTMLImageElement
                         ).src = `https://ui-avatars.com/api/?name=${player.username}&background=475569&color=fff&size=64`;

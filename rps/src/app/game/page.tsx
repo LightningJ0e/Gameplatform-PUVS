@@ -52,8 +52,10 @@ export default function Game() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isRoundActive, setIsRoundActive] = useState(false);
   const [gamePhase, setGamePhase] = useState<Phase>("idle");
-  const [currentRound, setCurrentRound] = useState(0);
+  const [currentRound, setCurrentRound] = useState(1);
   const [roundBanner, setRoundBanner] = useState<string | null>(null);
+  const [endBanner, setEndBanner] = useState<string | null>(null);
+  const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
 
   const [playedCard, setPlayedCard] = useState<{ type: RpsCard } | null>(null);
   const [opponentPlayedCard, setOpponentPlayedCard] = useState<{
@@ -67,7 +69,9 @@ export default function Game() {
   const isReadyIntRef = useRef<number | null>(null);
   const resultIntRef = useRef<number | null>(null);
   const lastChosenMoveRef = useRef<Move | null>(null);
-  const startedRef = useRef(false); // sorgt dafür, dass startRound nur einmal passiert
+  const startedRef = useRef(false); // schützt vor Doppelstart beim Handshake
+  const autoNextTimeoutRef = useRef<number | null>(null); // 2s Auto-Start nach Anzeige
+  const endTriggeredRef = useRef(false);
 
   const clearIsReady = () => {
     if (isReadyIntRef.current) {
@@ -79,6 +83,12 @@ export default function Game() {
     if (resultIntRef.current) {
       clearInterval(resultIntRef.current);
       resultIntRef.current = null;
+    }
+  };
+  const clearAutoNext = () => {
+    if (autoNextTimeoutRef.current) {
+      clearTimeout(autoNextTimeoutRef.current);
+      autoNextTimeoutRef.current = null;
     }
   };
 
@@ -99,7 +109,7 @@ export default function Game() {
     }
   }, [gameId, router, setGameId]);
 
-  // Initial: Karten-Flip-Intro + ready + isReady-Polling (einmalig bis Start)
+  // Initial: Karten-Flip-Intro + ready + isReady-Polling (für die erste Runde)
   useEffect(() => {
     const t1 = window.setTimeout(
       () => setPlayerCardsRevealed((p) => [true, p[1], p[2]]),
@@ -123,7 +133,6 @@ export default function Game() {
       if (!id) return;
       try {
         await apiReady(id); // nur für Runde 1
-        // isReady pollt bis „ready“ (und startet genau 1x die Runde)
         clearIsReady();
         isReadyIntRef.current = window.setInterval(async () => {
           try {
@@ -135,7 +144,9 @@ export default function Game() {
             if (data?.message === "ready" && !startedRef.current) {
               startedRef.current = true;
               clearIsReady();
-              startRound();
+              startRound(); // startet UI + Countdown
+              // nach Start der Runde ist Handshake fertig
+              startedRef.current = false;
             }
           } catch {}
         }, 300);
@@ -150,21 +161,20 @@ export default function Game() {
       clearTimeout(t3);
       clearIsReady();
       clearResultPoll();
+      clearAutoNext();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Karte wählen
-  const handleCardSelect = (index: number) => setSelectedCardIndex(index);
 
-  // EINMALIGE Runde starten
+  // Runde starten (nur UI/Countdown) – Rundenzähler wird erhöht
   const startRound = useCallback(() => {
     if (isRoundActive || gamePhase !== "idle") return;
 
     setPlayedCard(null);
     setOpponentPlayedCard(null);
 
-    setCurrentRound(1);
     setGamePhase("ready");
     setTimeout(() => {
       setGamePhase("round");
@@ -175,6 +185,39 @@ export default function Game() {
       }, 800);
     }, 800);
   }, [gamePhase, isRoundActive]);
+
+  // Server-Handshake für *jede weitere* Runde: /ready -> isready -> startRound
+  const startNextRound = useCallback(async () => {
+    if (startedRef.current) return; // vermeidet Doppel-Handshake
+    const id =
+      gameId ??
+      (typeof window !== "undefined" ? sessionStorage.getItem("gameId") : null);
+    if (!id) return;
+
+    try {
+      startedRef.current = true;
+      await apiReady(id);
+      clearIsReady();
+      isReadyIntRef.current = window.setInterval(async () => {
+        try {
+          const rsp = await fetch(
+            `/api/game/isready?gameId=${encodeURIComponent(id)}`
+          );
+          if (!rsp.ok) return;
+          const data = await rsp.json();
+          if (data?.message === "ready") {
+            clearIsReady();
+            startRound();
+            // UI-Phase starten
+            startedRef.current = false;
+          }
+        } catch {}
+      }, 300);
+    } catch (e) {
+      console.error("apiReady (next round) failed:", e);
+      startedRef.current = false;
+    }
+  }, [gameId]);
 
   // Countdown → Move → Ergebnis einmalig pollen
   useEffect(() => {
@@ -292,13 +335,14 @@ export default function Game() {
                 ? raw.current_round.round_no - 1
                 : undefined);
 
-            // Banner nach 2 Sekunden anzeigen
+            // Banner nach 2 Sekunden anzeigen, 1 Sekunde sichtbar, danach Karten leeren
             setTimeout(() => {
               setRoundBanner(
                 `Round ${roundNo}: ${winnerName} ${
                   winnerName === "draw" ? "" : "won"
                 }`
               );
+              setCurrentRound(roundNo + 1);
             }, 2000);
             setTimeout(() => {
               setRoundBanner(null);
@@ -316,14 +360,98 @@ export default function Game() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown]);
 
+  // *** NEU: Auto-Weiterstart 2s nachdem Banner weg ist UND beide Karten null sind ***
+  useEffect(() => {
+    // Bedingungen: keine Runde aktiv, Phase idle, kein Banner, beide Karten null
+    if (
+      !isRoundActive &&
+      gamePhase === "idle" &&
+      roundBanner === null &&
+      playedCard === null &&
+      opponentPlayedCard === null
+    ) {
+      clearAutoNext();
+      autoNextTimeoutRef.current = window.setTimeout(() => {
+        // Handshake + Start der nächsten Runde
+        startNextRound();
+      }, 2000);
+    } else {
+      // wenn eine Bedingung nicht passt, anstehendes Autostart-Timeout abbrechen
+      clearAutoNext();
+    }
+
+    return () => {
+      // beim Dependency-Wechsel das evtl. gesetzte Timeout räumen
+      clearAutoNext();
+    };
+  }, [
+    isRoundActive,
+    gamePhase,
+    roundBanner,
+    playedCard,
+    opponentPlayedCard,
+    startNextRound,
+  ]);
+
   // Home
-  const navigateBackToHome = () => {
-    resetGame();
-    router.push("/");
-  };
+  const navigateBackToHome = useCallback(
+    (endResult?: "win" | "lose") => {
+      // wenn mit Ergebnis: erst Banner, dann zurück
+      if (endResult) {
+        if (endTriggeredRef.current) return; // mehrfach-Trigger verhindern
+        endTriggeredRef.current = true;
+
+        // alle laufenden Zeitgeber stoppen
+        clearAutoNext();
+        clearIsReady();
+        clearResultPoll();
+
+        // UI einfrieren
+        setIsRoundActive(false);
+        setGamePhase("idle");
+
+        // Banner anzeigen
+        setEndBanner(endResult === "win" ? "You won!" : "You lost!");
+
+        // nach 2s zurück zur Home
+        window.setTimeout(() => {
+          setEndBanner(null);
+          resetGame();
+          setPageClass("page-slide-out-up");
+          router.push("/");
+        }, 2000);
+        return;
+      }
+
+      // Standard: sofort zurück
+      resetGame();
+      setPageClass("page-slide-out-up");
+      router.push("/");
+    },
+    [
+      clearAutoNext,
+      clearIsReady,
+      clearResultPoll,
+      resetGame,
+      router,
+      setGamePhase,
+      setIsRoundActive,
+    ]
+  );
+
+  useEffect(() => {
+    if (endTriggeredRef.current) return;
+
+    if (playerHearts <= 0 || opponentHearts <= 0) {
+      const iWin = playerHearts > 0 && opponentHearts <= 0;
+      navigateBackToHome(iWin ? "win" : "lose");
+    }
+  }, [playerHearts, opponentHearts, navigateBackToHome]);
 
   return (
-    <div className="h-screen bg-slate-900 relative overflow-hidden text-white flex flex-col justify-center">
+    <div
+      className={`h-screen bg-slate-900 relative overflow-hidden text-white flex flex-col justify-center ${pageClass}`}
+    >
       {/* Opponent */}
       <PlayerProfile
         username={opponent?.username || "Unknown Opponent"}
@@ -336,8 +464,6 @@ export default function Game() {
         maxHearts={2}
         position="top-left"
         rankingPosition={opponent?.rank}
-        elo={opponent?.elo}
-        winrate={opponent?.winrate}
         playerId="opponent"
       />
 
@@ -352,8 +478,6 @@ export default function Game() {
           maxHearts={2}
           position="bottom-left"
           rankingPosition={user.rank}
-          elo={user.elo}
-          winrate={user.winrate}
           playerId="player"
         />
       )}
@@ -382,7 +506,6 @@ export default function Game() {
       </div>
 
       {/* Round Counter */}
-
       <div className="absolute top-16 right-1/7 p-2 ">
         <div className="text-center">
           <h1 className="text-white font-semibold text-4xl mb-6">Round</h1>
@@ -438,12 +561,17 @@ export default function Game() {
                 size="large"
                 isFlipped={playerCardsRevealed[index]}
                 isSelected={selectedCardIndex === index}
-                onClick={() => handleCardSelect(index)}
+                onClick={() => setSelectedCardIndex(index)}
               />
             </div>
           ))}
         </div>
       </div>
+      {endBanner && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-50">
+          <h1 className="text-white text-6xl font-extrabold">{endBanner}</h1>
+        </div>
+      )}
 
       {/* Phasen Overlays (schlank) */}
       {gamePhase === "ready" && (
@@ -456,7 +584,7 @@ export default function Game() {
       {gamePhase === "round" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
           <h1 className="text-white text-8xl font-bold animate-bounce">
-            Round 1
+            Round: {currentRound}
           </h1>
         </div>
       )}
@@ -471,49 +599,11 @@ export default function Game() {
       {countdown !== null && (
         <div className="absolute top-1/2 right-8 transform -translate-y-1/2 bg-slate-800/90 backdrop-blur-sm rounded-lg p-6 z-10">
           <div className="text-center">
-            <h3 className="text-white font-semibold text-lg mb-2">Zeit</h3>
+            <h3 className="text-white font-semibold text-lg mb-2">Time</h3>
             <div className="text-4xl font-bold text-red-500">{countdown}</div>
           </div>
         </div>
       )}
-
-      {/* Buttons */}
-      <div className="absolute bottom-6 right-6 flex flex-col gap-3 z-10">
-        <button
-          onClick={startRound}
-          disabled={isRoundActive || gamePhase !== "idle"}
-          className={`px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg ${
-            isRoundActive || gamePhase !== "idle"
-              ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-              : "bg-green-600 hover:bg-green-500 text-white"
-          }`}
-        >
-          {isRoundActive || gamePhase !== "idle"
-            ? "Runde läuft..."
-            : "Runde Starten"}
-        </button>
-
-        <button
-          onClick={navigateBackToHome}
-          className="w-12 h-12 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
-          title="Zurück zur Hauptseite"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className="w-6 h-6"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-            />
-          </svg>
-        </button>
-      </div>
     </div>
   );
 }

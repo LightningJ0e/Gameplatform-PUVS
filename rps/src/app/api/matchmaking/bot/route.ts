@@ -3,7 +3,6 @@ import { getJwtTokenFromCookie } from "@/app/lib/auth";
 
 const MATCHMAKING_BASE =
   process.env.MATCHMAKING_BASE_URL ?? "http://localhost:8002";
-const COOKIE_NAME = process.env.AUTH_COOKIE_NAME ?? "auth";
 
 export async function POST() {
   try {

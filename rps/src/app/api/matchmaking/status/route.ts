@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getJwtTokenFromCookie } from "@/app/lib/auth";
 
 const MATCHMAKING_BASE =
