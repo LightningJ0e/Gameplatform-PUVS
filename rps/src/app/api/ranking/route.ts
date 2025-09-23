@@ -9,14 +9,36 @@ type UpstreamEntry = {
   elo: number;
   winrate: number;
   rank: number;
+  picture?: string | null;
 };
 
 type Player = {
   id: number;
   username: string;
   score: number;
-  profileImage?: string | null;
+  picture?: string | null;
 };
+
+// optional, verhindert Caching bei Next.js Routen
+export const dynamic = "force-dynamic";
+
+function normalizePicture(p?: string | null): string | undefined {
+  if (!p) return undefined;
+  // Whitespaces/Zeilenumbrüche entfernen
+  const clean = p.replace(/\s+/g, "");
+
+  // Falls bereits eine data:-URL, so lassen
+  if (clean.startsWith("data:image/")) return clean;
+
+  // Einfache Heuristik fürs MIME-Type
+  // JPEG beginnt oft mit /9j..., PNG mit iVBORw0KG...
+  let mime = "image/png";
+  const head = clean.slice(0, 10);
+  if (head.startsWith("/9j")) mime = "image/jpeg";
+  else if (head.startsWith("iVBORw0KG")) mime = "image/png";
+
+  return `data:${mime};base64,${clean}`;
+}
 
 export async function GET() {
   const ac = new AbortController();
@@ -27,6 +49,7 @@ export async function GET() {
       method: "GET",
       headers: { accept: "application/json" },
       signal: ac.signal,
+      cache: "no-store",
     });
     clearTimeout(to);
 
@@ -45,12 +68,12 @@ export async function GET() {
       return NextResponse.json(payload, { status: upstream.status });
     }
 
-    // Map: rank -> id, elo -> score
+    // Map: rank -> id, elo -> score, picture normalisieren
     const players: Player[] = (payload as UpstreamEntry[]).map((e) => ({
       id: e.rank,
       username: e.username,
       score: e.elo,
-      profileImage: null, // falls du später Avatare hast, hier einsetzen
+      picture: normalizePicture(e.picture),
     }));
 
     return NextResponse.json(players, { status: 200 });

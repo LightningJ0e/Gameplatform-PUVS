@@ -6,7 +6,7 @@ interface Player {
   id: number;
   username: string;
   score: number;
-  profileImage?: string;
+  picture?: string;
 }
 
 export default function Ranking({
@@ -94,7 +94,7 @@ export default function Ranking({
           </svg>
           Back
         </button>
-        <h1 className="text-3xl font-bold text-white">Ranging list</h1>
+        <h1 className="text-3xl font-bold text-white">Ranking list</h1>
         <div className="w-16"></div> {/* Spacer */}
       </div>
 
@@ -119,9 +119,9 @@ export default function Ranking({
 
                 {/* Profilbild */}
                 <div className="w-16 h-16 mx-6">
-                  {player.profileImage ? (
+                  {player.picture ? (
                     <img
-                      src={player.profileImage}
+                      src={player.picture}
                       alt={`${player.username} avatar`}
                       className="w-full h-full rounded-full object-cover border-2 border-slate-600"
                       onError={(e) => {

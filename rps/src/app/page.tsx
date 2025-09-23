@@ -1,6 +1,5 @@
 "use client";
 
-import Card from "@/components/ui/Card";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -49,6 +48,11 @@ export default function Home() {
       router.push(href);
     }, 500);
   };
+
+  useEffect(() => {
+    if (!isFound) return;
+    navigateWithAnimationOutUp("/game");
+  }, [isFound, navigateWithAnimationOutUp]);
 
   return (
     <div

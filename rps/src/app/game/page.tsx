@@ -1,46 +1,89 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+
 import Card from "@/components/ui/Card";
 import PlayerProfile from "@/components/ui/PlayerProfile";
 import { useAuth } from "@/context/AuthContext";
 import { useGame } from "@/context/GameContext";
 import { useOpponent } from "@/context/OpponentContext";
 
+import {
+  PLAYER_CARDS,
+  CARD_TO_MOVE,
+  MOVE_TO_CARD,
+  type Card as RpsCard,
+  type Move,
+} from "@/utils/cards";
+
+import { apiReady, apiMove } from "@/services/gameApi";
+
+// kleine Helfer
+function toMoveNum(m: unknown): Move | null {
+  if (m === null || m === undefined) return null;
+  if (typeof m === "number" && m >= 0 && m <= 2) return m as Move;
+  if (typeof m === "string") {
+    const s = m.trim().toLowerCase();
+    if (s === "rock") return 0;
+    if (s === "paper") return 1;
+    if (s === "scissors") return 2;
+    if (/^[0-2]$/.test(s)) return Number(s) as Move;
+  }
+  return null;
+}
+
+type Phase = "idle" | "ready" | "round" | "countdown";
+
 export default function Game() {
   const router = useRouter();
   const { user } = useAuth();
-  const { gameId, clearGameId, setGameId, resetGame } = useGame();
-  const [playerCardsRevealed, setPlayerCardsRevealed] = useState([
-    false,
-    false,
-    false,
-  ]);
+  const { opponent } = useOpponent();
+  const { gameId, setGameId, resetGame } = useGame();
+
+  // UI-State (minimal)
+  const [playerCardsRevealed, setPlayerCardsRevealed] = useState<
+    [boolean, boolean, boolean]
+  >([false, false, false]);
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(
     null
   );
+
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isRoundActive, setIsRoundActive] = useState(false);
-  const [gamePhase, setGamePhase] = useState<
-    "idle" | "ready" | "round" | "countdown"
-  >("idle");
+  const [gamePhase, setGamePhase] = useState<Phase>("idle");
   const [currentRound, setCurrentRound] = useState(0);
-  const [playedCard, setPlayedCard] = useState<{
-    type: "rock" | "paper" | "scissors";
-  } | null>(null);
+  const [roundBanner, setRoundBanner] = useState<string | null>(null);
+
+  const [playedCard, setPlayedCard] = useState<{ type: RpsCard } | null>(null);
   const [opponentPlayedCard, setOpponentPlayedCard] = useState<{
-    type: "rock" | "paper" | "scissors";
+    type: RpsCard;
   } | null>(null);
+
   const [playerHearts, setPlayerHearts] = useState(2);
   const [opponentHearts, setOpponentHearts] = useState(2);
-  const [pageClass, setPageClass] = useState("page-slide-in-from-bottom");
 
-  const { opponent } = useOpponent();
+  // Timer/Interval Refs
+  const isReadyIntRef = useRef<number | null>(null);
+  const resultIntRef = useRef<number | null>(null);
+  const lastChosenMoveRef = useRef<Move | null>(null);
+  const startedRef = useRef(false); // sorgt dafür, dass startRound nur einmal passiert
 
-  // Check if game ID exists, redirect to home if not
+  const clearIsReady = () => {
+    if (isReadyIntRef.current) {
+      clearInterval(isReadyIntRef.current);
+      isReadyIntRef.current = null;
+    }
+  };
+  const clearResultPoll = () => {
+    if (resultIntRef.current) {
+      clearInterval(resultIntRef.current);
+      resultIntRef.current = null;
+    }
+  };
+
+  // gameId sichern/hydrieren
   useEffect(() => {
-    // Try restoring from sessionStorage before redirecting
     if (!gameId) {
       try {
         const stored =
@@ -48,455 +91,429 @@ export default function Game() {
             ? sessionStorage.getItem("gameId")
             : null;
         if (stored) {
-          console.log("Game: Restored game ID from sessionStorage:", stored);
-          // hydrate context so rest of app sees the ID
           setGameId(stored);
           return;
         }
       } catch {}
-      console.log(gameId);
-      console.log("Game: No game ID found, redirecting to home");
       router.push("/");
-      return;
     }
+  }, [gameId, router, setGameId]);
 
-    console.log("Game: Starting game with ID:", gameId);
-  }, [gameId, router, clearGameId, setGameId]);
+  // Initial: Karten-Flip-Intro + ready + isReady-Polling (einmalig bis Start)
+  useEffect(() => {
+    const t1 = window.setTimeout(
+      () => setPlayerCardsRevealed((p) => [true, p[1], p[2]]),
+      300
+    );
+    const t2 = window.setTimeout(
+      () => setPlayerCardsRevealed((p) => [p[0], true, p[2]]),
+      550
+    );
+    const t3 = window.setTimeout(
+      () => setPlayerCardsRevealed((p) => [p[0], p[1], true]),
+      800
+    );
 
-  // Spieler- und Gegnerkarten (vorläufig alle als "rock" für das Layout)
-  const playerCards = ["rock", "paper", "scissors"] as const;
-  const opponentCards = ["rock", "paper", "scissors"] as const;
+    (async () => {
+      const id =
+        gameId ??
+        (typeof window !== "undefined"
+          ? sessionStorage.getItem("gameId")
+          : null);
+      if (!id) return;
+      try {
+        await apiReady(id); // nur für Runde 1
+        // isReady pollt bis „ready“ (und startet genau 1x die Runde)
+        clearIsReady();
+        isReadyIntRef.current = window.setInterval(async () => {
+          try {
+            const rsp = await fetch(
+              `/api/game/isready?gameId=${encodeURIComponent(id)}`
+            );
+            if (!rsp.ok) return;
+            const data = await rsp.json();
+            if (data?.message === "ready" && !startedRef.current) {
+              startedRef.current = true;
+              clearIsReady();
+              startRound();
+            }
+          } catch {}
+        }, 300);
+      } catch (e) {
+        console.error("Initial apiReady failed:", e);
+      }
+    })();
 
-  // Funktion zum Auswählen einer Karte
-  const handleCardSelect = (index: number, cardType: string) => {
-    setSelectedCardIndex(index);
-    console.log(`Selected ${cardType} at index ${index}`);
-  };
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearIsReady();
+      clearResultPoll();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Funktion zum Starten der Runde
-  const startRound = () => {
-    if (isRoundActive || gamePhase !== "idle") return; // Verhindert mehrfaches Starten
+  // Karte wählen
+  const handleCardSelect = (index: number) => setSelectedCardIndex(index);
 
-    // Auswahl für neue Runde zurücksetzen
-    setSelectedCardIndex(null);
+  // EINMALIGE Runde starten
+  const startRound = useCallback(() => {
+    if (isRoundActive || gamePhase !== "idle") return;
+
     setPlayedCard(null);
     setOpponentPlayedCard(null);
 
-    // Erhöhe die Rundennummer
-    const nextRound = currentRound + 1;
-    setCurrentRound(nextRound);
-
-    // Starte die Phasen-Sequenz
-    if (currentRound === 0) {
-      // Allererste Runde: Ready -> Round -> Countdown
-      setGamePhase("ready");
-
-      // Nach 2 Sekunden: Ready -> Round
-      setTimeout(() => {
-        setGamePhase("round");
-
-        // Nach weiteren 2 Sekunden: Round -> Countdown
-        setTimeout(() => {
-          setGamePhase("countdown");
-          setIsRoundActive(true);
-          setCountdown(3);
-          console.log(
-            `Countdown gestartet für Runde ${nextRound}! Wähle eine Karte aus...`
-          );
-        }, 2000);
-      }, 2000);
-    } else {
-      // Weitere Runden: Direkt Round -> Countdown
+    setCurrentRound(1);
+    setGamePhase("ready");
+    setTimeout(() => {
       setGamePhase("round");
-
-      // Nach 2 Sekunden: Round -> Countdown
       setTimeout(() => {
         setGamePhase("countdown");
         setIsRoundActive(true);
-        setCountdown(3);
-        console.log(
-          `Countdown gestartet für Runde ${nextRound}! Wähle eine Karte aus...`
-        );
-      }, 2000);
-    }
-  };
+        setCountdown(7);
+      }, 800);
+    }, 800);
+  }, [gamePhase, isRoundActive]);
 
-  function handleHeartLoss(opponentCard: string, playerCard: string) {
-    // Gewinnregeln: rock > scissors, scissors > paper, paper > rock
-    const winConditions = {
-      rock: "scissors",
-      scissors: "paper",
-      paper: "rock",
-    };
-
-    if (
-      winConditions[playerCard as keyof typeof winConditions] === opponentCard
-    ) {
-      // Spieler gewinnt - Gegner verliert Herz
-      setOpponentHearts((prev) => Math.max(0, prev - 1));
-      console.log(`Spieler gewinnt! ${playerCard} besiegt ${opponentCard}`);
-      return "player";
-    } else if (
-      winConditions[opponentCard as keyof typeof winConditions] === playerCard
-    ) {
-      // Gegner gewinnt - Spieler verliert Herz
-      setPlayerHearts((prev) => Math.max(0, prev - 1));
-      console.log(`Gegner gewinnt! ${opponentCard} besiegt ${playerCard}`);
-      return "opponent";
-    } else {
-      // Unentschieden - niemand verliert Herz
-      console.log(`Unentschieden! Beide haben ${playerCard} gespielt`);
-      return "tie";
-    }
-  }
-
-  // Countdown-Effekt
+  // Countdown → Move → Ergebnis einmalig pollen
   useEffect(() => {
     if (countdown === null) return;
 
     if (countdown > 0) {
-      const timer = setTimeout(() => {
-        setCountdown(countdown - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
-    } else {
-      // Countdown beendet
-      setIsRoundActive(false);
-      setCountdown(null);
-      setGamePhase("idle");
-
-      // Prüfen ob eine Karte ausgewählt ist, wenn nicht -> zufällige auswählen
-      let finalCardIndex = selectedCardIndex;
-      if (selectedCardIndex === null) {
-        finalCardIndex = Math.floor(Math.random() * playerCards.length);
-        setSelectedCardIndex(finalCardIndex);
-        console.log(
-          `Keine Karte gewählt! Zufällig ausgewählt: ${playerCards[finalCardIndex]} (Index: ${finalCardIndex})`
-        );
-      } else {
-        console.log(
-          `Spieler hat ${playerCards[selectedCardIndex]} gewählt (Index: ${selectedCardIndex})`
-        );
-      }
-
-      // Gespielte Karte setzen
-      if (finalCardIndex !== null) {
-        setPlayedCard({
-          type: playerCards[finalCardIndex],
-        });
-      }
-
-      // Bot wählt zufällige Karte
-      const randomOpponentIndex = Math.floor(
-        Math.random() * opponentCards.length
+      const tm = window.setTimeout(
+        () => setCountdown((c) => (c ?? 1) - 1),
+        1000
       );
-      setOpponentPlayedCard({
-        type: opponentCards[randomOpponentIndex],
-      });
-      console.log(`Bot hat ${opponentCards[randomOpponentIndex]} gewählt`);
-
-      // Gewinner ermitteln und Herzen abziehen
-      if (finalCardIndex !== null) {
-        const winner = handleHeartLoss(
-          opponentCards[randomOpponentIndex],
-          playerCards[finalCardIndex]
-        );
-      }
-
-      console.log("Runde beendet!");
+      return () => clearTimeout(tm);
     }
+
+    // countdown = 0
+    setIsRoundActive(false);
+    setCountdown(null);
+    setGamePhase("idle");
+
+    // final card index (falls keine gewählt: Zufall)
+    let finalIdx = selectedCardIndex;
+    if (finalIdx === null) {
+      finalIdx = Math.floor(Math.random() * PLAYER_CARDS.length);
+      setSelectedCardIndex(finalIdx);
+    }
+    if (finalIdx === null) return;
+
+    const chosen = PLAYER_CARDS[finalIdx];
+    const moveNum: Move = CARD_TO_MOVE[chosen];
+    lastChosenMoveRef.current = moveNum;
+
+    (async () => {
+      const id =
+        gameId ??
+        (typeof window !== "undefined"
+          ? sessionStorage.getItem("gameId")
+          : null);
+      if (!id) return;
+
+      try {
+        await apiMove(id, moveNum);
+
+        // Ergebnis pollen bis previous_round.complete → Karten & Herzen setzen; dann stoppen
+        clearResultPoll();
+        resultIntRef.current = window.setInterval(async () => {
+          try {
+            const rsp = await fetch(
+              `/api/game/state?gameId=${encodeURIComponent(id)}`
+            );
+            if (!rsp.ok) return;
+            const raw = await rsp.json();
+
+            const prev = raw?.previous_round;
+            if (!prev || prev?.status !== "complete") return;
+
+            // Eigene Karte
+            const myMoveNum =
+              toMoveNum(
+                prev?.player_move ??
+                  prev?.p1_move ??
+                  prev?.move_p1 ??
+                  prev?.p1_action
+              ) ?? lastChosenMoveRef.current;
+            setPlayedCard(
+              myMoveNum != null
+                ? { type: MOVE_TO_CARD[myMoveNum as 0 | 1 | 2] }
+                : null
+            );
+
+            // Gegnerkarte
+            const oppMoveNum = toMoveNum(
+              prev?.opponent_move ??
+                prev?.p2_move ??
+                prev?.move_p2 ??
+                prev?.p2_action
+            );
+            setOpponentPlayedCard(
+              oppMoveNum != null
+                ? { type: MOVE_TO_CARD[oppMoveNum as 0 | 1 | 2] }
+                : null
+            );
+
+            // Herzen
+            const livesP1 = raw?.lives_p1;
+            const livesP2 = raw?.lives_p2;
+            const p1Id = raw?.player_1_id;
+            const myId = (user as any)?.id ?? (user as any)?.userId ?? null;
+            const amP1 = myId ? p1Id === myId : true;
+            const serverMyLives = amP1 ? livesP1 : livesP2;
+            const serverOppLives = amP1 ? livesP2 : livesP1;
+
+            if (typeof serverMyLives === "number")
+              setPlayerHearts(serverMyLives);
+            if (typeof serverOppLives === "number")
+              setOpponentHearts(serverOppLives);
+
+            // fertig → Polling stoppen (kein Loop danach)
+            clearResultPoll();
+
+            let winnerName = "draw";
+            if (prev?.winner === "p1" || prev?.winner === "p2") {
+              const didP1Win = prev.winner === "p1";
+              const winIsMe = (didP1Win && amP1) || (!didP1Win && !amP1);
+              winnerName = winIsMe
+                ? user?.username ?? "You"
+                : opponent?.username ?? "Opponent";
+            } else if (raw?.winner_player_id) {
+              const winIsMe = raw.winner_player_id === myId;
+              winnerName = winIsMe
+                ? user?.username ?? "You"
+                : opponent?.username ?? "Opponent";
+            }
+            const roundNo =
+              prev?.round_no ??
+              (typeof raw?.current_round?.round_no === "number"
+                ? raw.current_round.round_no - 1
+                : undefined);
+
+            // Banner nach 2 Sekunden anzeigen
+            setTimeout(() => {
+              setRoundBanner(
+                `Round ${roundNo}: ${winnerName} ${
+                  winnerName === "draw" ? "" : "won"
+                }`
+              );
+            }, 2000);
+            setTimeout(() => {
+              setRoundBanner(null);
+            }, 3000);
+            setTimeout(() => {
+              setPlayedCard(null);
+              setOpponentPlayedCard(null);
+            }, 4000);
+          } catch {}
+        }, 300);
+      } catch (e) {
+        console.error("apiMove failed:", e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [countdown]);
 
-  // Navigation mit Animation
-  const navigateWithAnimation = (href: string) => {
-    setPageClass("page-slide-out-up");
-    setTimeout(() => {
-      router.push(href);
-    }, 500);
-  };
-
-  // Navigation zurück zur Home mit Game-Reset
+  // Home
   const navigateBackToHome = () => {
-    console.log("Game: Navigating back to home and resetting game state");
-
-    // Reset des gesamten Game-Zustands
     resetGame();
-
-    // Navigation mit Animation
-    navigateWithAnimation("/");
+    router.push("/");
   };
-
-  // Spiel-Ende-Überwachung
-  useEffect(() => {
-    if (playerHearts === 0 || opponentHearts === 0) {
-      // Nach 2 Sekunden zur Startseite mit Game-Reset
-      setTimeout(() => {
-        navigateBackToHome();
-      }, 2000);
-    }
-  }, [playerHearts, opponentHearts]);
-
-  // Setup card reveal animation
-  useEffect(() => {
-    // Aufdecken der Spielerkarten
-    const timer1 = setTimeout(() => {
-      setPlayerCardsRevealed((prev) => [true, prev[1], prev[2]]);
-    }, 800);
-
-    const timer2 = setTimeout(() => {
-      setPlayerCardsRevealed((prev) => [prev[0], true, prev[2]]);
-    }, 1100);
-
-    const timer3 = setTimeout(() => {
-      setPlayerCardsRevealed((prev) => [prev[0], prev[1], true]);
-    }, 1400);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
-  }, []);
 
   return (
-    <>
-      <style jsx>{`
-        .cardAnimation {
-          animation: cardAnimation 2s ease-out forwards;
-          z-index: 50;
+    <div className="h-screen bg-slate-900 relative overflow-hidden text-white flex flex-col justify-center">
+      {/* Opponent */}
+      <PlayerProfile
+        username={opponent?.username || "Unknown Opponent"}
+        profileImage={
+          opponent?.picture
+            ? `data:image/png;base64,${opponent.picture}`
+            : undefined
         }
+        hearts={opponentHearts}
+        maxHearts={2}
+        position="top-left"
+        rankingPosition={opponent?.rank}
+        elo={opponent?.elo}
+        winrate={opponent?.winrate}
+        playerId="opponent"
+      />
 
-        @keyframes cardAnimation {
-          0% {
-            transform: translateY(0) scale(1);
-          }
-          100% {
-            transform: translate(calc(-0% + -35vw), calc(50% - 30vh)) scale(0.4)
-              rotate(-10deg);
-          }
-        }
-      `}</style>
-
-      {/* Game Container */}
-      <div
-        className={`h-screen bg-slate-900 relative overflow-hidden text-white flex flex-col justify-center ${pageClass}`}
-      >
-        {/* Opponent Profile - Top Left */}
+      {/* Player */}
+      {user && (
         <PlayerProfile
-          username={opponent?.username || "Unknown Opponent"}
+          username={user.username || "Player"}
           profileImage={
-            opponent?.picture
-              ? `data:image/png;base64,${opponent.picture}`
-              : undefined
+            user.picture ? `data:image/png;base64,${user.picture}` : undefined
           }
-          hearts={opponentHearts}
+          hearts={playerHearts}
           maxHearts={2}
-          position="top-left"
-          rankingPosition={opponent?.rank}
-          elo={opponent?.elo}
-          winrate={opponent?.winrate}
-          playerId="opponent"
-          onHeartBreak={(heartIndex) => {
-            console.log(`Opponent heart ${heartIndex} broke!`);
-          }}
+          position="bottom-left"
+          rankingPosition={user.rank}
+          elo={user.elo}
+          winrate={user.winrate}
+          playerId="player"
         />
-        {/* Player Profile - Bottom Left */}
-        {user && (
-          <PlayerProfile
-            username={user?.username || "Player"}
-            profileImage={
-              user?.picture
-                ? `data:image/png;base64,${user.picture}`
-                : undefined
-            }
-            hearts={playerHearts}
-            maxHearts={2}
-            position="bottom-left"
-            rankingPosition={user?.rank}
-            elo={user?.elo}
-            winrate={user?.winrate}
-            playerId="player"
-            onHeartBreak={(heartIndex) => {
-              console.log(`Player heart ${heartIndex} broke!`);
-            }}
-          />
-        )}
-        {/* Gegnerkarten (oben) - mit Rückseite */}
-        <div className="flex items-center justify-center py-8">
-          <div className="flex gap-6">
-            {opponentCards.map((cardType, index) => (
-              <div
-                key={`opponent-${index}`}
-                className={`
-            ${index === 0 ? "transform rotate-12 -translate-y-4" : ""}
-            ${index === 1 ? "transform translate-y-0" : ""}
-            ${index === 2 ? "transform -rotate-12 -translate-y-4" : ""}`}
-              >
-                <Card
-                  type={cardType}
-                  size="small"
-                  isFlipped={false}
-                  isInteractive={false}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Round Counter */}
-        <div className="absolute top-16 right-1/7 p-2 ">
-          <div className="text-center">
-            <h1 className="text-white font-semibold text-4xl mb-6">Round</h1>
-            <span className="text-white text-6xl font-bold">
-              {currentRound}
-            </span>
-          </div>
-        </div>
-        {/* Mittlere Spielbereich */}
-        <div className="flex flex-col items-center justify-center gap-4 py-6 relative">
-          {/* Gegner-Platzhalter (oben) */}
-          <div className="w-32 h-44">
-            {opponentPlayedCard ? (
-              <Card
-                type={opponentPlayedCard.type}
-                size="medium"
-                isFlipped={true}
-                isInteractive={false}
-              />
-            ) : (
-              <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50"></div>
-            )}
-          </div>
+      )}
 
-          {/* Spieler-Karten-Bereich */}
-          <div className="relative w-32 h-44">
-            {playedCard ? (
-              <Card
-                type={playedCard.type}
-                size="medium"
-                isFlipped={true}
-                isInteractive={false}
-              />
-            ) : (
-              <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50"></div>
-            )}
-          </div>
-        </div>
-        {/* Spielerkarten (unten) */}
-        <div className="flex items-center justify-center py-8">
-          <div className="flex gap-8">
-            {playerCards.map((cardType, index) => (
-              <div
-                key={`player-${index}`}
-                className={`
-                  ${
-                    index === 0
-                      ? "transform -rotate-10 translate-y-4"
-                      : index === 1
-                      ? "transform translate-y-0"
-                      : "transform rotate-10 translate-y-4"
-                  }
-                `}
-              >
-                <Card
-                  type={cardType}
-                  size="large"
-                  isFlipped={playerCardsRevealed[index]}
-                  isSelected={selectedCardIndex === index}
-                  onClick={() => handleCardSelect(index, cardType)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-        {/* Game Phase Display - Zentriert */}
-        {gamePhase === "ready" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-            <div className="text-center">
-              <h1 className="text-white text-8xl font-bold animate-pulse">
-                Ready?
-              </h1>
-            </div>
-          </div>
-        )}
-        {gamePhase === "round" && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-            <div className="text-center">
-              <h1 className="text-white text-8xl font-bold animate-bounce">
-                Round {currentRound}
-              </h1>
-            </div>
-          </div>
-        )}
-        {opponentHearts === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-            <div className="text-center">
-              <h1 className="text-white text-8xl font-bold animate-bounce">
-                You won!
-              </h1>
-            </div>
-          </div>
-        )}
-        {playerHearts === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
-            <div className="text-center">
-              <h1 className="text-white text-8xl font-bold animate-bounce">
-                You lost!
-              </h1>
-            </div>
-          </div>
-        )}
-        {/* Countdown Display - Rechte Seite */}
-        {countdown !== null && (
-          <div className="absolute top-1/2 right-8 transform -translate-y-1/2 bg-slate-800/90 backdrop-blur-sm rounded-lg p-6 z-10">
-            <div className="text-center">
-              <h3 className="text-white font-semibold text-lg mb-2">Zeit</h3>
-              <div className="text-4xl font-bold text-red-500">{countdown}</div>
-            </div>
-          </div>
-        )}
-        {/* Test Buttons - Unten rechts */}
-        <div className="absolute bottom-6 right-6 flex flex-col gap-3 z-10">
-          {/* Runde Starten Button */}
-          <button
-            onClick={startRound}
-            disabled={isRoundActive}
-            className={`
-            px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg
-            ${
-              isRoundActive
-                ? "bg-gray-600 text-gray-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-500 text-white"
-            }
-          `}
-          >
-            {isRoundActive || gamePhase !== "idle"
-              ? "Runde läuft..."
-              : "Runde Starten"}
-          </button>
-
-          {/* Zurück-Button */}
-          <button
-            onClick={navigateBackToHome}
-            className="w-12 h-12 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
-            title="Zurück zur Hauptseite"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-6 h-6"
+      {/* Gegnerkarten (verdeckt) */}
+      <div className="flex items-center justify-center py-8">
+        <div className="flex gap-6">
+          {PLAYER_CARDS.map((cardType, index) => (
+            <div
+              key={`opponent-${index}`}
+              className={`${
+                index === 0 ? "transform rotate-12 -translate-y-4" : ""
+              } ${index === 1 ? "transform translate-y-0" : ""} ${
+                index === 2 ? "transform -rotate-12 -translate-y-4" : ""
+              }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+              <Card
+                type={cardType}
+                size="small"
+                isFlipped={false}
+                isInteractive={false}
               />
-            </svg>
-          </button>
+            </div>
+          ))}
         </div>
       </div>
-    </>
+
+      {/* Round Counter */}
+
+      <div className="absolute top-16 right-1/7 p-2 ">
+        <div className="text-center">
+          <h1 className="text-white font-semibold text-4xl mb-6">Round</h1>
+          <span className="text-white text-6xl font-bold">{currentRound}</span>
+        </div>
+      </div>
+
+      {/* Mitte: Reveal */}
+      <div className="flex flex-col items-center justify-center gap-4 py-6 relative">
+        <div className="w-32 h-44">
+          {opponentPlayedCard ? (
+            <Card
+              type={opponentPlayedCard.type}
+              size="medium"
+              isFlipped={true}
+              isInteractive={false}
+            />
+          ) : (
+            <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50" />
+          )}
+        </div>
+
+        <div className="relative w-32 h-44">
+          {playedCard ? (
+            <Card
+              type={playedCard.type}
+              size="medium"
+              isFlipped={true}
+              isInteractive={false}
+            />
+          ) : (
+            <div className="w-32 h-44 bg-slate-700 rounded-lg opacity-50" />
+          )}
+        </div>
+      </div>
+
+      {/* Eigene Karten unten */}
+      <div className="flex items-center justify-center py-8">
+        <div className="flex gap-8">
+          {PLAYER_CARDS.map((cardType, index) => (
+            <div
+              key={`player-${index}`}
+              className={`${
+                index === 0
+                  ? "transform -rotate-10 translate-y-4"
+                  : index === 1
+                  ? "transform translate-y-0"
+                  : "transform rotate-10 translate-y-4"
+              }`}
+            >
+              <Card
+                type={cardType}
+                size="large"
+                isFlipped={playerCardsRevealed[index]}
+                isSelected={selectedCardIndex === index}
+                onClick={() => handleCardSelect(index)}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Phasen Overlays (schlank) */}
+      {gamePhase === "ready" && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+          <h1 className="text-white text-8xl font-bold animate-pulse">
+            Ready?
+          </h1>
+        </div>
+      )}
+      {gamePhase === "round" && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20">
+          <h1 className="text-white text-8xl font-bold animate-bounce">
+            Round 1
+          </h1>
+        </div>
+      )}
+
+      {roundBanner && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-30">
+          <h1 className="text-white text-5xl font-bold">{roundBanner}</h1>
+        </div>
+      )}
+
+      {/* Countdown rechts */}
+      {countdown !== null && (
+        <div className="absolute top-1/2 right-8 transform -translate-y-1/2 bg-slate-800/90 backdrop-blur-sm rounded-lg p-6 z-10">
+          <div className="text-center">
+            <h3 className="text-white font-semibold text-lg mb-2">Zeit</h3>
+            <div className="text-4xl font-bold text-red-500">{countdown}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Buttons */}
+      <div className="absolute bottom-6 right-6 flex flex-col gap-3 z-10">
+        <button
+          onClick={startRound}
+          disabled={isRoundActive || gamePhase !== "idle"}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors shadow-lg ${
+            isRoundActive || gamePhase !== "idle"
+              ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+              : "bg-green-600 hover:bg-green-500 text-white"
+          }`}
+        >
+          {isRoundActive || gamePhase !== "idle"
+            ? "Runde läuft..."
+            : "Runde Starten"}
+        </button>
+
+        <button
+          onClick={navigateBackToHome}
+          className="w-12 h-12 bg-slate-800 hover:bg-slate-700 rounded-full flex items-center justify-center text-white transition-colors shadow-lg"
+          title="Zurück zur Hauptseite"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-6 h-6"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
   );
 }
