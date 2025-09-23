@@ -521,7 +521,7 @@ spec:
       nodePort: 30083 # Node-Port (muss im Bereich 30000-32767 liegen)
 ---
 # ------------------------------
-# Bot-Deplyoment
+# Bot-Deployment
 # ------------------------------
 apiVersion: apps/v1
 kind: Deployment
@@ -592,7 +592,7 @@ spec:
         - name: frontendservice
           image: ghcr.io/lightningj0e/gameplatform-puvs/frontendserviceimage:latest
           ports:
-            - containerPort: 3000
+            - containerPort: 3001
           resources:
             requests:
               cpu: "250m"
@@ -614,6 +614,384 @@ spec:
     app: frontendservice
   ports:
     - protocol: TCP
-      port: 3000 # Cluster-Port
-      targetPort: 3000 # Container-Port
+      port: 3001 # Cluster-Port
+      targetPort: 3001 # Container-Port
       nodePort: 30085 # Node-Port (muss im Bereich 30000-32767 liegen)
+
+# ------------------------------
+# Alles folgende ist Monitoring
+# ------------------------------
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+
+# Prometheus RBAC (Role Based Access Control)
+# Serviceaccount
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: monitoring
+---
+# Rolle für das abgreifen von Metriken
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus
+rules:
+  - apiGroups: [""]
+    resources: ["nodes","nodes/metrics","nodes/proxy","services","endpoints","pods","namespaces","configmaps"]
+    verbs: ["get","list","watch"]
+  - apiGroups: ["extensions","networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get","list","watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+---
+# Binden der Rolle an Identität --> Prometheus Service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+  - kind: ServiceAccount
+    name: prometheus
+    namespace: monitoring
+
+# kube-state-metrics (objects/replicas)
+# Serviceaccount
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+---
+# Rolle für das abgreifen von Metriken --> Kube-State-Metrics
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kube-state-metrics
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps","secrets","nodes","pods","services","resourcequotas","replicationcontrollers","limitranges","persistentvolumeclaims","persistentvolumes","namespaces"]
+    verbs: ["list","watch"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets","deployments","replicasets","statefulsets"]
+    verbs: ["list","watch"]
+  - apiGroups: ["batch"]
+    resources: ["cronjobs","jobs"]
+    verbs: ["list","watch"]
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["list","watch"]
+  - apiGroups: ["extensions","networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["list","watch"]
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["list","watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses","volumeattachments"]
+    verbs: ["list","watch"]
+---
+# Binden der Rolle an Identität --> kube-state-metrics Service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kube-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+  - kind: ServiceAccount
+    name: kube-state-metrics
+    namespace: monitoring
+---
+# Deployment für Kube-State-Metrics
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: kube-state-metrics }
+  template:
+    metadata:
+      labels: { app: kube-state-metrics }
+    spec:
+      serviceAccountName: kube-state-metrics
+      containers:
+        - name: kube-state-metrics
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.13.0
+          ports: [{ name: http, containerPort: 8080 }]
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits:   { cpu: "200m", memory: "256Mi" }
+---
+# Service für Kube-State-Metrics
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics
+  namespace: monitoring
+spec:
+  selector: { app: kube-state-metrics }
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+---
+# Deployment node-exporter (node CPU/mem/disk)
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels: { app: node-exporter }
+  template:
+    metadata:
+      labels: { app: node-exporter }
+    spec:
+      hostNetwork: true
+      hostPID: true
+      dnsPolicy: ClusterFirstWithHostNet
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: node-exporter
+          image: quay.io/prometheus/node-exporter:v1.8.1
+          args:
+            - --path.rootfs=/host
+            - --path.procfs=/host/proc
+            - --path.sysfs=/host/sys
+            - --collector.filesystem.mount-points-exclude=^/(host|proc|sys|dev|run)($|/)
+          ports: [{ name: metrics, containerPort: 9100 }]
+          securityContext: { runAsNonRoot: true, runAsUser: 65534 }
+          volumeMounts:
+            - { name: rootfs, mountPath: /host, readOnly: true }
+      volumes:
+        - name: rootfs
+          hostPath: { path: / }
+---
+# Service node-exporter (node CPU/mem/disk)
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-exporter
+  namespace: monitoring
+spec:
+  selector: { app: node-exporter }
+  clusterIP: None
+  ports:
+    - name: metrics
+      port: 9100
+      targetPort: 9100
+
+---
+# Prometheus (scrapes node-exporter, kube-state-metrics, kubelet/cAdvisor)
+# Config der Intervalle und Metrik-Apis / Services
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: monitoring
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    scrape_configs:
+      - job_name: kube-state-metrics
+        kubernetes_sd_configs: [{ role: endpoints }]
+        relabel_configs:
+          - action: keep
+            source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_namespace]
+            regex: kube-state-metrics;monitoring
+      - job_name: node-exporter
+        kubernetes_sd_configs: [{ role: endpoints }]
+        relabel_configs:
+          - action: keep
+            source_labels: [__meta_kubernetes_service_name, __meta_kubernetes_namespace]
+            regex: node-exporter;monitoring
+      - job_name: kubelet
+        scheme: https
+        metrics_path: /metrics
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        tls_config: { insecure_skip_verify: true }
+        kubernetes_sd_configs: [{ role: node }]
+      - job_name: kubelet-cadvisor
+        scheme: https
+        metrics_path: /metrics/cadvisor
+        bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+        tls_config: { insecure_skip_verify: true }
+        kubernetes_sd_configs: [{ role: node }]
+---
+# Prometheus-Deployment --> Scraper
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-server
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: prometheus }
+  template:
+    metadata:
+      labels: { app: prometheus }
+    spec:
+      serviceAccountName: prometheus
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.53.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --web.enable-lifecycle
+          ports: [{ containerPort: 9090 }]
+          resources:
+            requests: { cpu: "200m", memory: "512Mi" }
+            limits:   { cpu: "1",    memory: "1Gi" }
+          volumeMounts:
+            - { name: prom-config, mountPath: /etc/prometheus }
+            - { name: prom-data,   mountPath: /prometheus }
+      volumes:
+        - name: prom-config
+          configMap: { name: prometheus-config }
+        - name: prom-data
+          emptyDir: {}
+---
+# Prometheus-Deployment --> Scraper
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-server
+  namespace: monitoring
+spec:
+  selector: { app: prometheus }
+  type: NodePort
+  ports:
+    - name: http
+      port: 80
+      targetPort: 9090
+      nodePort: 31672
+
+---
+# Grafana (provision Prometheus + 2 dashboards)
+#ConfigMap Grafana Datasources
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: monitoring
+data:
+  datasources.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.monitoring.svc
+        access: proxy
+        isDefault: true
+---
+# ConfigMap Dashboard-Provider
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-providers
+  namespace: monitoring
+data:
+  dashboardproviders.yaml: |
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards/default
+---
+# Deployment Grafana
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: grafana }
+  template:
+    metadata:
+      labels: { app: grafana }
+    spec:
+      initContainers:
+        - name: download-dashboards
+          image: curlimages/curl:8.9.1
+          command: ["sh","-c"]
+          args:
+            - >
+              set -e;
+              curl -fsSL -o /dash/k8s-cluster.json https://grafana.com/api/dashboards/3662/revisions/2/download;
+              curl -fsSL -o /dash/node-exporter-full.json https://grafana.com/api/dashboards/1860/revisions/33/download;
+              ls -l /dash;
+          volumeMounts:
+            - { name: dashboards, mountPath: /dash }
+      containers:
+        - name: grafana
+          image: grafana/grafana:10.4.3
+          ports: [{ containerPort: 3000 }]
+          env:
+            - { name: GF_SECURITY_ADMIN_USER, value: admin }
+            - { name: GF_SECURITY_ADMIN_PASSWORD, value: admin }
+          volumeMounts:
+            - { name: datasources,          mountPath: /etc/grafana/provisioning/datasources }
+            - { name: dashboard-providers,  mountPath: /etc/grafana/provisioning/dashboards }
+            - { name: dashboards,           mountPath: /var/lib/grafana/dashboards/default }
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits:   { cpu: "500m", memory: "512Mi" }
+      volumes:
+        - name: datasources
+          configMap: { name: grafana-datasources }
+        - name: dashboard-providers
+          configMap: { name: grafana-dashboard-providers }
+        - name: dashboards
+          emptyDir: {}
+---
+# Service Grafana
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  selector: { app: grafana }
+  type: NodePort
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+      nodePort: 30090
+      

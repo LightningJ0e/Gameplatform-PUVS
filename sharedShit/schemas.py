@@ -74,3 +74,4 @@ class GameStateOut(BaseModel):
     status: str                              # "in_progress"|"finished"
     winner_player_id: Optional[int] = None
     current_round: Optional[RoundStateOut] = None
+    previous_round: Optional[RoundStateOut] = None

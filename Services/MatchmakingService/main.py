@@ -9,14 +9,49 @@ from sqlalchemy.orm import Session
 import requests
 from fastapi.security import OAuth2PasswordBearer
 
-# In the container, this service's code is copied into /app, so utils is a local module
 from utils import send_create_game, get_user_info_from_userservice, send_create_game_bot, get_BOT_info_from_userservice
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
+import uuid
+
+LOCK_KEY = "lock:matchmaking"
+LOCK_TTL_SEC = 5  # kurz halten
+
+def acquire_lock() -> str | None:
+    token = str(uuid.uuid4())
+    ok = redis_client.set(LOCK_KEY, token, nx=True, ex=LOCK_TTL_SEC)
+    return token if ok else None
+
+def refresh_lock(token: str) -> None:
+    # best-effort Verlängerung (reicht hier)
+    if redis_client.get(LOCK_KEY) == token:
+        redis_client.expire(LOCK_KEY, LOCK_TTL_SEC)
+
+def release_lock(token: str) -> None:
+    # nur löschen, wenn wir noch Besitzer sind
+    pipe = redis_client.pipeline()
+    while True:
+        try:
+            pipe.watch(LOCK_KEY)
+            if pipe.get(LOCK_KEY) == token:
+                pipe.multi()
+                pipe.delete(LOCK_KEY)
+                pipe.execute()
+            else:
+                pipe.unwatch()
+            break
+        except redis.WatchError:
+            continue
+
+
+
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="http://userservice:8000/login")
 # Add sharedShit to path for imports
 sys.path.insert(0, 'sharedShit')
-from database import get_db
-from models import User, Game
+#from database import get_db
+#from models import User, Game
+
+
+
 
 redis_client = redis.Redis(host=os.getenv('REDIS_HOST', 'redis'), port=int(os.getenv('REDIS_PORT', '6379')), db=0, decode_responses=True)
 
@@ -25,44 +60,52 @@ redis_client = redis.Redis(host=os.getenv('REDIS_HOST', 'redis'), port=int(os.ge
 app = FastAPI(title="MatchmakingService")
 
 
-def find_match(waiting_players: list[int]):
-    for j in range(len(waiting_players)):
-        for k in range(len(waiting_players)):
-            # Damit man sich nicht selbst matched 
-            if waiting_players[j] != waiting_players[k]:
-                player1_elo = redis_client.hget(f"user:{waiting_players[j]}", "elo")
-                player2_elo = redis_client.hget(f"user:{waiting_players[k]}", "elo")
-                player1_userid = redis_client.hget(f"user:{waiting_players[j]}", "userid")
-                player2_userid = redis_client.hget(f"user:{waiting_players[k]}", "userid")
-                player1_token = waiting_players[j]
-                player2_token = waiting_players[k]
+def find_match(_ignored_waiting_players: list[int] = None):
+    while True:
+        waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
+        if len(waiting_players) < 2:
+            return None
+        for j in range(len(waiting_players)):
+            for k in range(j + 1, len(waiting_players)):
+                p1 = waiting_players[j]
+                p2 = waiting_players[k]
+                if p1 == p2:
+                    continue
 
-                # Gleicht den ELO unterschied zwischen zwei Spieler ab
+                player1_elo = redis_client.hget(f"user:{p1}", "elo")
+                player2_elo = redis_client.hget(f"user:{p2}", "elo")
+                player1_userid = redis_client.hget(f"user:{p1}", "userid")
+                player2_userid = redis_client.hget(f"user:{p2}", "userid")
+                if player1_elo is None or player2_elo is None or player1_userid is None or player2_userid is None:
+                    continue
+
                 elo_diff = abs(int(player1_elo) - int(player2_elo))
                 if elo_diff <= 100:
                     game_info = send_create_game(player1_userid, player2_userid)
-                    # Create Redis entry for game found status
+
                     game_data = {
                         "status": "game_found",
-                        "player1": player1_token,
-                        "player2": player2_token,
+                        "player1": p1,
+                        "player2": p2,
                         "player1_elo": player1_elo,
                         "player2_elo": player2_elo,
                         "timestamp": time.time(),
-                        "game_id": game_info.get("id")
+                        "game_id": game_info.get("id"),
                     }
-                    
-                    # Store the game found information with a unique key
                     game_id = f"game_{int(time.time())}_{player1_userid}_{player1_elo}_{player2_userid}_{player2_elo}"
                     redis_client.hset(game_id, mapping=game_data)
-                    redis_client.expire(game_id, 60)  #60 Sekunden lang wird da game gespeichert.
-                    
-                    # Remove players from queue
-                    remove_player_from_queue(player1_token)
-                    remove_player_from_queue(player2_token)
+                    redis_client.expire(game_id, 60)
 
-                    return game_data
-    return None
+                    remove_player_from_queue(p1)
+                    remove_player_from_queue(p2)
+
+                    break
+            else:
+                continue
+            break
+        else:
+            return None
+
 
 @app.post("/queue/add")
 def add_player_to_queue(token: str):
@@ -92,10 +135,13 @@ def add_player_to_queue(token: str):
     pipe.lpush("matchmaking_queue", token)
     pipe.execute()
 
-    waiting_players = redis_client.lrange("matchmaking_queue", 0, -1)
-    if len(waiting_players) >= 2:
-        find_match(waiting_players)
-    
+    lock_token = acquire_lock()
+    if lock_token:
+        try:
+            find_match(None) 
+        finally:
+            release_lock(lock_token)
+
     return {"message": "Player added to queue", "elo": user_elo}
 
 
@@ -148,7 +194,7 @@ def get_player_queue_info(player_token: str):
                 "game_id": game_id
             }
     
-    # No game found, check if player is in queue
+    # Ist SPieler in der Que
     queue_position = redis_client.lpos("matchmaking_queue", player_token)
     
     if queue_position is not None:
@@ -161,7 +207,6 @@ def get_player_queue_info(player_token: str):
             "queue_length": redis_client.llen("matchmaking_queue")
         }
     
-    # Player not in queue and no game found
     return {
         "status": "not_in_queue",
         "player_token": player_token,
@@ -171,9 +216,7 @@ def get_player_queue_info(player_token: str):
 
 @app.post("/queue/remove")
 def remove_player_from_queue(token: str):
-    # Remove player from matchmaking queue
     redis_client.lrem("matchmaking_queue", 0, token)
-    # Delete user's data from Redis
     redis_client.delete(f"user:{token}")
     return {"message": f"Player {token} removed from queue"}
 
@@ -201,7 +244,6 @@ def match_bot(token: str):
         "game_id": game.get("id")
     }
         
-    # Store the game found information with a unique key
     game_id = f"game_{int(time.time())}_{player1_userid}_{player1_elo}_{bot_id}_{bot_elo}"
     redis_client.hset(game_id, mapping=game_data)
     redis_client.expire(game_id, 60)
